@@ -7,12 +7,18 @@
     "start": "node server.js",
     "dev": "node server.js"
   },
-  "keywords": ["spreadsheet", "formulas", "ai", "marketplace"],
+  "keywords": [
+    "spreadsheet",
+    "formulas",
+    "ai",
+    "marketplace"
+  ],
   "author": "Dikshyant",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
+    "@google/generative-ai": "^0.24.1",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",

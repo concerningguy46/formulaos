@@ -1,9 +1,32 @@
 const Anthropic = require('@anthropic-ai/sdk');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const User = require('../models/User');
 
-// Initialize Anthropic client
-const getAnthropicClient = () => {
-  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const AI_PROVIDER = (process.env.AI_PROVIDER || 'anthropic').toLowerCase();
+
+const getAnthropicClient = () => new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+const getGeminiModel = () => {
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  return genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+};
+
+const generateAIResponse = async ({ prompt, systemPrompt, anthropicModel, geminiPrompt }) => {
+  if (AI_PROVIDER === 'gemini') {
+    const model = getGeminiModel();
+    const result = await model.generateContent(`${systemPrompt}\n\n${geminiPrompt}`);
+    return result.response.text();
+  }
+
+  const client = getAnthropicClient();
+  const message = await client.messages.create({
+    model: anthropicModel,
+    max_tokens: 1024,
+    system: systemPrompt,
+    messages: [{ role: 'user', content: prompt }],
+  });
+
+  return message.content[0].text;
 };
 
 /**
@@ -91,22 +114,12 @@ const generateFormula = async (req, res, next) => {
       context += `\n\nSample data from the sheet:\n${JSON.stringify(sampleData, null, 2)}`;
     }
 
-    const client = getAnthropicClient();
-
-    const message = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1024,
-      system: FORMULA_SYSTEM_PROMPT,
-      messages: [
-        {
-          role: 'user',
-          content: `Generate a spreadsheet formula for: "${description}"${context}`,
-        },
-      ],
+    const responseText = await generateAIResponse({
+      prompt: `Generate a spreadsheet formula for: "${description}"${context}`,
+      systemPrompt: FORMULA_SYSTEM_PROMPT,
+      anthropicModel: 'claude-sonnet-4-20250514',
+      geminiPrompt: `Generate a spreadsheet formula for: "${description}"${context}`,
     });
-
-    // Parse Claude's response
-    const responseText = message.content[0].text;
     let parsed;
 
     try {
@@ -135,7 +148,6 @@ const generateFormula = async (req, res, next) => {
       },
     });
   } catch (error) {
-    // Handle Anthropic API errors specifically
     if (error.status === 401) {
       return res.status(500).json({
         success: false,
@@ -173,21 +185,12 @@ const explainFormula = async (req, res, next) => {
       });
     }
 
-    const client = getAnthropicClient();
-
-    const message = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1024,
-      system: EXPLAINER_SYSTEM_PROMPT,
-      messages: [
-        {
-          role: 'user',
-          content: `Explain this spreadsheet formula: ${formula}`,
-        },
-      ],
+    const responseText = await generateAIResponse({
+      prompt: `Explain this spreadsheet formula: ${formula}`,
+      systemPrompt: EXPLAINER_SYSTEM_PROMPT,
+      anthropicModel: 'claude-sonnet-4-20250514',
+      geminiPrompt: `Explain this spreadsheet formula: ${formula}`,
     });
-
-    const responseText = message.content[0].text;
     let parsed;
 
     try {
