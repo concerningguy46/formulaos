@@ -17,7 +17,7 @@ const authRoutes = require('./routes/auth');
 const formulaRoutes = require('./routes/formulas');
 const marketplaceRoutes = require('./routes/marketplace');
 const aiRoutes = require('./routes/ai');
-const paymentRoutes = require('./routes/payments');
+// const paymentRoutes = require('./routes/payments');
 const userRoutes = require('./routes/users');
 const sheetRoutes = require('./routes/sheets');
 
@@ -69,7 +69,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/formulas', formulaRoutes);
 app.use('/api/marketplace', marketplaceRoutes);
 app.use('/api/ai', aiRoutes);
-app.use('/api/payments', paymentRoutes);
+// app.use('/api/payments', paymentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/sheets', sheetRoutes);
 

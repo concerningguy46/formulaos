@@ -1,13 +1,8 @@
-const express = require('express');
-const router = express.Router();
-const { protect } = require('../middleware/auth');
-const { createCheckout, handleWebhook } = require('../controllers/paymentController');
+const express = require('express')
+const router = express.Router()
 
-// POST /api/payments/checkout — create Stripe checkout session
-router.post('/checkout', protect, createCheckout);
+router.get('/', (req, res) => {
+  res.json({ message: 'Payments coming soon' })
+})
 
-// POST /api/payments/webhook — Stripe webhook (uses raw body, configured in server.js)
-// Note: This route does NOT use JSON parsing — raw body is needed for signature verification
-router.post('/webhook', express.raw({ type: 'application/json' }), handleWebhook);
-
-module.exports = router;
+module.exports = router
