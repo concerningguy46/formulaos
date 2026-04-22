@@ -1,17 +1,9 @@
-const express = require('express');
-const router = express.Router();
-const { protect } = require('../middleware/auth');
-const { aiLimiter } = require('../middleware/rateLimit');
-const { generateFormula, explainFormula } = require('../controllers/aiController');
+const express = require('express')
+const router = express.Router()
+const { generateFormula, explainFormula } = require('../controllers/aiController')
+const { protect } = require('../middleware/auth')
 
-// All AI routes require authentication and rate limiting
-router.use(protect);
-router.use(aiLimiter);
+router.post('/generate', protect, generateFormula)
+router.post('/explain', protect, explainFormula)
 
-// POST /api/ai/generate — generate formula from plain English
-router.post('/generate', generateFormula);
-
-// POST /api/ai/explain — explain a formula in plain English
-router.post('/explain', explainFormula);
-
-module.exports = router;
+module.exports = router

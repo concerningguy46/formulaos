@@ -6,6 +6,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 const passport = require('passport');
+const mongoose = require('mongoose');
 
 const connectDB = require('./config/db');
 const configurePassport = require('./config/passport');
@@ -76,9 +77,11 @@ app.use('/api/sheets', sheetRoutes);
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({
-    success: true,
-    message: 'FormulaOS API is running',
-    timestamp: new Date().toISOString(),
+    status: 'ok',
+    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    ai: process.env.GEMINI_API_KEY ? 'configured' : 'missing key',
+    payments: process.env.STRIPE_SECRET_KEY !== 'disabled' ? 'configured' : 'disabled',
+    googleAuth: process.env.GOOGLE_CLIENT_ID !== 'disabled' ? 'configured' : 'disabled',
   });
 });
 
@@ -97,7 +100,7 @@ app.use(errorHandler);
 // Start Server
 // ---------------------
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
 const startServer = async () => {
   try {

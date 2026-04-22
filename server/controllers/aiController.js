@@ -1,230 +1,86 @@
-const Anthropic = require('@anthropic-ai/sdk');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const User = require('../models/User');
+const { GoogleGenerativeAI } = require('@google/generative-ai')
 
-const AI_PROVIDER = (process.env.AI_PROVIDER || 'anthropic').toLowerCase();
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
 
-const getAnthropicClient = () => new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-const getGeminiModel = () => {
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  return genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-};
-
-const generateAIResponse = async ({ prompt, systemPrompt, anthropicModel, geminiPrompt }) => {
-  if (AI_PROVIDER === 'gemini') {
-    const model = getGeminiModel();
-    const result = await model.generateContent(`${systemPrompt}\n\n${geminiPrompt}`);
-    return result.response.text();
-  }
-
-  const client = getAnthropicClient();
-  const message = await client.messages.create({
-    model: anthropicModel,
-    max_tokens: 1024,
-    system: systemPrompt,
-    messages: [{ role: 'user', content: prompt }],
-  });
-
-  return message.content[0].text;
-};
-
-/**
- * System prompt for formula generation — specializes Claude for spreadsheet tasks.
- */
-const FORMULA_SYSTEM_PROMPT = `You are FormulaOS AI — an expert spreadsheet formula assistant. Your job is to generate spreadsheet formulas based on plain English descriptions.
-
-RULES:
-1. Always return a valid spreadsheet formula (Excel/Google Sheets compatible)
-2. Use the column headers and sample data provided as context when available
-3. Explain each part of the formula in simple, plain English
-4. If the request is ambiguous, make reasonable assumptions and explain them
-5. Never make up functions that don't exist
-
-RESPONSE FORMAT (always use this exact JSON structure):
-{
-  "formula": "=YOUR_FORMULA_HERE",
-  "explanation": [
-    "Step 1: explanation...",
-    "Step 2: explanation...",
-    "Step 3: explanation..."
-  ],
-  "suggestedName": "A short name for this formula",
-  "assumptions": ["Any assumptions you made"]
-}`;
-
-/**
- * System prompt for formula explanation.
- */
-const EXPLAINER_SYSTEM_PROMPT = `You are FormulaOS AI — an expert at explaining spreadsheet formulas in plain English.
-
-RULES:
-1. Break down each part of the formula step by step
-2. Use simple language — the user is NOT technical
-3. Explain what happens for different input values (give examples)
-4. If the formula has errors, point them out and suggest corrections
-
-RESPONSE FORMAT (always use this exact JSON structure):
-{
-  "summary": "One-sentence summary of what this formula does",
-  "steps": [
-    "Step 1: explanation...",
-    "Step 2: explanation...",
-    "Step 3: explanation..."
-  ],
-  "examples": [
-    { "input": "If A2 = 100", "output": "Result would be..." }
-  ],
-  "tips": ["Any helpful tips or warnings"]
-}`;
-
-/**
- * Generate a formula from a plain English description.
- * POST /api/ai/generate
- */
-const generateFormula = async (req, res, next) => {
+exports.generateFormula = async (req, res) => {
   try {
-    const { description, columnHeaders, sampleData } = req.body;
-
+    const { description, sheetContext } = req.body
     if (!description) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please describe what formula you need',
-      });
+      return res.status(400).json({ message: 'Description is required' })
     }
 
-    // Check AI usage limits
-    const user = await User.findById(req.user._id);
-    const usage = user.checkAIUsage();
-
-    if (!usage.canUse) {
-      return res.status(429).json({
-        success: false,
-        message: `You've used all ${usage.limit} AI generations this month. Upgrade to Pro for unlimited.`,
-        data: { usage },
-      });
+    if (req.user) {
+      const User = require('../models/User')
+      const user = await User.findById(req.user._id)
+      if (user.aiUsageThisMonth >= 20) {
+        return res.status(429).json({
+          message: 'Monthly AI limit reached. Upgrade to Pro for unlimited generations.',
+          limitReached: true
+        })
+      }
     }
 
-    // Build context from sheet data
-    let context = '';
-    if (columnHeaders && columnHeaders.length > 0) {
-      context += `\n\nSheet column headers: ${columnHeaders.join(', ')}`;
-    }
-    if (sampleData) {
-      context += `\n\nSample data from the sheet:\n${JSON.stringify(sampleData, null, 2)}`;
-    }
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
 
-    const responseText = await generateAIResponse({
-      prompt: `Generate a spreadsheet formula for: "${description}"${context}`,
-      systemPrompt: FORMULA_SYSTEM_PROMPT,
-      anthropicModel: 'claude-sonnet-4-20250514',
-      geminiPrompt: `Generate a spreadsheet formula for: "${description}"${context}`,
-    });
-    let parsed;
+    const prompt = `You are a spreadsheet formula expert. 
+    The user wants a formula that does: ${description}
+    ${sheetContext ? `Sheet context (column headers and sample data): ${JSON.stringify(sheetContext)}` : ''}
+    
+    Respond ONLY in this exact JSON format with no extra text:
+    {
+      "formula": "=THE_FORMULA_HERE",
+      "explanation": "Plain English step by step explanation of what this formula does",
+      "steps": ["step 1", "step 2", "step 3"]
+    }`
 
-    try {
-      // Try to extract JSON from the response
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      parsed = JSON.parse(jsonMatch ? jsonMatch[0] : responseText);
-    } catch {
-      // If parsing fails, return raw response
-      parsed = {
-        formula: responseText,
-        explanation: ['See the generated formula above'],
-        suggestedName: 'AI Generated Formula',
-        assumptions: [],
-      };
+    const result = await model.generateContent(prompt)
+    const text = result.response.text()
+
+    const clean = text.replace(/```json|```/g, '').trim()
+    const parsed = JSON.parse(clean)
+
+    if (req.user) {
+      const User = require('../models/User')
+      await User.findByIdAndUpdate(req.user._id, {
+        $inc: { aiUsageThisMonth: 1 }
+      })
     }
 
-    // Increment usage counter
-    user.aiUsageThisMonth += 1;
-    await user.save();
-
-    res.json({
-      success: true,
-      data: {
-        ...parsed,
-        usage: user.checkAIUsage(),
-      },
-    });
+    res.json(parsed)
   } catch (error) {
-    if (error.status === 401) {
-      return res.status(500).json({
-        success: false,
-        message: 'AI service configuration error. Please contact support.',
-      });
-    }
-    next(error);
+    console.error('AI generate error:', error)
+    res.status(500).json({ message: 'AI generation failed', error: error.message })
   }
-};
+}
 
-/**
- * Explain a formula in plain English.
- * POST /api/ai/explain
- */
-const explainFormula = async (req, res, next) => {
+exports.explainFormula = async (req, res) => {
   try {
-    const { formula } = req.body;
-
+    const { formula } = req.body
     if (!formula) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide a formula to explain',
-      });
+      return res.status(400).json({ message: 'Formula is required' })
     }
 
-    // Check AI usage limits
-    const user = await User.findById(req.user._id);
-    const usage = user.checkAIUsage();
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
 
-    if (!usage.canUse) {
-      return res.status(429).json({
-        success: false,
-        message: `You've used all ${usage.limit} AI generations this month. Upgrade to Pro for unlimited.`,
-        data: { usage },
-      });
-    }
+    const prompt = `You are a spreadsheet expert. Explain this formula in plain English for a non-technical user:
+    Formula: ${formula}
+    
+    Respond ONLY in this exact JSON format with no extra text:
+    {
+      "summary": "One sentence summary of what this formula does",
+      "steps": ["step 1 explanation", "step 2 explanation", "step 3 explanation"],
+      "example": "A practical example of when to use this"
+    }`
 
-    const responseText = await generateAIResponse({
-      prompt: `Explain this spreadsheet formula: ${formula}`,
-      systemPrompt: EXPLAINER_SYSTEM_PROMPT,
-      anthropicModel: 'claude-sonnet-4-20250514',
-      geminiPrompt: `Explain this spreadsheet formula: ${formula}`,
-    });
-    let parsed;
+    const result = await model.generateContent(prompt)
+    const text = result.response.text()
 
-    try {
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      parsed = JSON.parse(jsonMatch ? jsonMatch[0] : responseText);
-    } catch {
-      parsed = {
-        summary: 'See the explanation below',
-        steps: [responseText],
-        examples: [],
-        tips: [],
-      };
-    }
+    const clean = text.replace(/```json|```/g, '').trim()
+    const parsed = JSON.parse(clean)
 
-    // Increment usage counter
-    user.aiUsageThisMonth += 1;
-    await user.save();
-
-    res.json({
-      success: true,
-      data: {
-        ...parsed,
-        usage: user.checkAIUsage(),
-      },
-    });
+    res.json(parsed)
   } catch (error) {
-    if (error.status === 401) {
-      return res.status(500).json({
-        success: false,
-        message: 'AI service configuration error. Please contact support.',
-      });
-    }
-    next(error);
+    console.error('AI explain error:', error)
+    res.status(500).json({ message: 'AI explanation failed', error: error.message })
   }
-};
-
-module.exports = { generateFormula, explainFormula };
+}
