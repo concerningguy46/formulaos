@@ -1,0 +1,11 @@
+{
+  "name": "formulaos",
+  "private": true,
+  "version": "1.0.0",
+  "description": "FormulaOS monorepo root",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:client": "npm run dev --prefix client",
+    "dev:server": "npm run dev --prefix server"
+  }
+}
