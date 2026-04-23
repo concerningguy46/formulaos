@@ -1,12 +1,8 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { Workbook } from '@fortune-sheet/react';
 import '@fortune-sheet/react/dist/index.css';
 import useSpreadsheetStore from '../../store/spreadsheetStore';
 
-/**
- * Spreadsheet grid — wraps FortuneSheet with dark theme overrides,
- * cell selection tracking, and auto-save integration.
- */
 const SpreadsheetGrid = ({ onCellSelect }) => {
   const containerRef = useRef(null);
   const { setSheetData, setSelectedCell, startAutoSave, stopAutoSave } = useSpreadsheetStore();
@@ -22,15 +18,11 @@ const SpreadsheetGrid = ({ onCellSelect }) => {
     },
   ]);
 
-  // Start auto-save on mount, stop on unmount
   useEffect(() => {
     startAutoSave();
     return () => stopAutoSave();
   }, [startAutoSave, stopAutoSave]);
 
-  /**
-   * Handle cell changes — mark data as dirty for auto-save.
-   */
   const handleChange = useCallback(
     (data) => {
       setSheetData(data);
@@ -38,9 +30,6 @@ const SpreadsheetGrid = ({ onCellSelect }) => {
     [setSheetData]
   );
 
-  /**
-   * Handle cell selection — track for formula bar and search icon.
-   */
   const handleCellSelect = useCallback(
     (cell, position) => {
       if (cell) {
@@ -62,37 +51,43 @@ const SpreadsheetGrid = ({ onCellSelect }) => {
   return (
     <div
       ref={containerRef}
-      className="w-full fortune-sheet-container"
       style={{
         width: '100%',
-        height: 'calc(100vh - 13rem)',
-        minHeight: '560px',
+        height: 'calc(100vh - 16rem)',
+        minHeight: '600px',
         background: 'white',
-        isolation: 'isolate',
+        border: '1px solid var(--ivory-3)',
+        borderRadius: '14px',
         overflow: 'hidden',
+        boxShadow: '0 20px 50px rgba(28, 26, 23, 0.06)',
       }}
     >
-      <Workbook
-        data={sheetSettings}
-        onChange={handleChange}
-        onCellSelect={handleCellSelect}
-        style={{
-          width: '100%',
-          height: '100%',
-          minHeight: '560px',
-        }}
-        options={{
-          showToolbar: false,
-          showFormulaBar: false,
-          showSheetTabs: true,
-          showinfobar: false,
-          showstatisticBar: false,
-          lang: 'en',
-          column: 26,
-          row: 50,
-          toolbarItems: [],
-        }}
-      />
+      <div
+        className="fortune-sheet-container"
+        style={{ width: '100%', height: '100%', minHeight: '600px', overflow: 'hidden' }}
+      >
+        <Workbook
+          data={sheetSettings}
+          onChange={handleChange}
+          onCellSelect={handleCellSelect}
+          style={{
+            width: '100%',
+            height: '100%',
+            minHeight: '600px',
+          }}
+          options={{
+            showToolbar: false,
+            showFormulaBar: false,
+            showSheetTabs: true,
+            showinfobar: false,
+            showstatisticBar: false,
+            lang: 'en',
+            column: 26,
+            row: 50,
+            toolbarItems: [],
+          }}
+        />
+      </div>
     </div>
   );
 };

@@ -4,11 +4,6 @@ import { searchBuiltInFormulas } from '../../utils/formulaIndex';
 import useFormulaStore from '../../store/formulaStore';
 import Badge from '../ui/Badge';
 
-/**
- * Formula Search Bar - floating command palette with 3 tabs:
- * Built-in, My Formulas, Marketplace.
- * Empty state leads to AI generator.
- */
 const FormulaSearchBar = ({ isOpen, onClose, onInsert, onAIGenerate }) => {
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState('builtin');
@@ -61,107 +56,103 @@ const FormulaSearchBar = ({ isOpen, onClose, onInsert, onAIGenerate }) => {
     (activeTab === 'my' && filteredMyFormulas.length > 0);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-24 px-4">
-      <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" onClick={onClose} />
+    <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'grid', placeItems: 'start center', padding: '96px 16px 24px' }}>
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(28,26,23,0.18)', backdropFilter: 'blur(4px)' }} onClick={onClose} />
 
-      <div className="relative w-full max-w-2xl surface-panel overflow-hidden animate-scaleIn">
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-ivory-3">
-          <Search size={18} className="text-ink-3 flex-shrink-0" />
+      <div style={{ position: 'relative', width: '100%', maxWidth: '760px', border: '1px solid var(--ivory-3)', borderRadius: '20px', background: 'rgba(255,255,255,0.98)', boxShadow: '0 28px 80px rgba(28,26,23,0.14)', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 18px', borderBottom: '1px solid var(--ivory-3)' }}>
+          <Search size={18} color="var(--ink-3)" />
           <input
             ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search formulas or describe the calculation you need"
-            className="flex-1 bg-transparent text-ink placeholder-ink-3 text-base outline-none"
+            style={{ flex: 1, border: 0, outline: 'none', fontSize: '15px', color: 'var(--ink)', background: 'transparent' }}
           />
-          <button onClick={onClose} className="p-1 text-ink-3 hover:text-ink">
+          <button onClick={onClose} style={{ width: '36px', height: '36px', display: 'grid', placeItems: 'center', borderRadius: '10px', border: '1px solid var(--ivory-3)', background: 'white', color: 'var(--ink-3)' }}>
             <X size={16} />
           </button>
         </div>
 
-        <div className="flex gap-0 px-5 pt-3 border-b border-ivory-3">
+        <div style={{ display: 'flex', gap: '8px', padding: '14px 18px 0', borderBottom: '1px solid var(--ivory-3)' }}>
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 text-[11px] uppercase tracking-[0.12em] border-b-2 transition-all ${
-                activeTab === tab.id
-                  ? 'text-ink border-teal'
-                  : 'text-ink-3 border-transparent hover:text-ink'
-              }`}
+              style={{
+                padding: '12px 14px',
+                border: 0,
+                borderBottom: activeTab === tab.id ? '2px solid var(--teal)' : '2px solid transparent',
+                background: 'transparent',
+                color: activeTab === tab.id ? 'var(--ink)' : 'var(--ink-3)',
+                fontSize: '11px',
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+              }}
             >
-              {tab.label}
-              <span className="text-xs opacity-60">({tab.count})</span>
+              {tab.label} <span style={{ opacity: 0.65 }}>({tab.count})</span>
             </button>
           ))}
         </div>
 
-        <div className="max-h-80 overflow-y-auto">
-          {activeTab === 'builtin' &&
+        <div style={{ maxHeight: '420px', overflowY: 'auto' }}>
+          {activeTab === 'builtin' ? (
             builtinResults.map((formula, i) => (
-            <button
-              key={`${formula.name}-${i}`}
-              onClick={() => handleInsert(formula)}
-              className="w-full flex items-center gap-4 px-5 py-3 hover:bg-ivory-2 transition-colors text-left group"
-            >
-              <div className="w-10 h-10 rounded-[4px] bg-ivory-2 flex items-center justify-center flex-shrink-0">
-                <span className="text-ink-2 font-mono text-xs font-bold">fx</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-ink text-sm">{formula.name}</span>
-                  <Badge variant="outline">{formula.category}</Badge>
+              <button
+                key={`${formula.name}-${i}`}
+                onClick={() => handleInsert(formula)}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '14px', padding: '16px 18px', border: 0, borderBottom: '1px solid var(--ivory-3)', background: 'white', textAlign: 'left' }}
+              >
+                <div style={{ width: '44px', height: '44px', borderRadius: '14px', display: 'grid', placeItems: 'center', background: 'var(--ivory-2)', color: 'var(--ink-2)', flexShrink: 0 }}>
+                  <span style={{ fontFamily: 'monospace', fontSize: '12px', fontWeight: 700 }}>fx</span>
                 </div>
-                <p className="text-xs text-ink-3 mt-0.5 truncate">{formula.description}</p>
-                <code className="text-xs text-ink-3 font-mono">{formula.syntax}</code>
-              </div>
-              <ArrowRight
-                size={14}
-                className="text-ink-3 group-hover:text-ink transition-colors flex-shrink-0"
-              />
-            </button>
-          ))}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--ink)' }}>{formula.name}</span>
+                    <Badge variant="outline">{formula.category}</Badge>
+                  </div>
+                  <p style={{ margin: '6px 0 0', fontSize: '13px', color: 'var(--ink-3)' }}>{formula.description}</p>
+                  <code style={{ fontSize: '12px', color: 'var(--ink-3)', fontFamily: 'monospace' }}>{formula.syntax}</code>
+                </div>
+                <ArrowRight size={15} color="var(--ink-3)" />
+              </button>
+            ))
+          ) : null}
 
-          {activeTab === 'my' &&
+          {activeTab === 'my' ? (
             filteredMyFormulas.map((formula) => (
-            <button
-              key={formula._id}
-              onClick={() => handleInsert(formula)}
-              className="w-full flex items-center gap-4 px-5 py-3 hover:bg-ivory-2 transition-colors text-left group"
-            >
-              <div className="w-10 h-10 rounded-[4px] bg-ivory-2 flex items-center justify-center flex-shrink-0">
-                <span className="text-ink-2 font-mono text-xs font-bold">My</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <span className="font-medium text-ink text-sm">{formula.name}</span>
-                {formula.description && (
-                  <p className="text-xs text-ink-3 mt-0.5 truncate">{formula.description}</p>
-                )}
-                <code className="text-xs text-ink-3 font-mono">{formula.syntax}</code>
-              </div>
-              <ArrowRight
-                size={14}
-                className="text-ink-3 group-hover:text-ink transition-colors flex-shrink-0"
-              />
-            </button>
-          ))}
+              <button
+                key={formula._id}
+                onClick={() => handleInsert(formula)}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '14px', padding: '16px 18px', border: 0, borderBottom: '1px solid var(--ivory-3)', background: 'white', textAlign: 'left' }}
+              >
+                <div style={{ width: '44px', height: '44px', borderRadius: '14px', display: 'grid', placeItems: 'center', background: 'rgba(0,212,170,0.10)', color: 'var(--teal-text)', flexShrink: 0 }}>
+                  <span style={{ fontSize: '12px', fontWeight: 700 }}>My</span>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--ink)' }}>{formula.name}</span>
+                  {formula.description ? <p style={{ margin: '6px 0 0', fontSize: '13px', color: 'var(--ink-3)' }}>{formula.description}</p> : null}
+                  <code style={{ fontSize: '12px', color: 'var(--ink-3)', fontFamily: 'monospace' }}>{formula.syntax}</code>
+                </div>
+                <ArrowRight size={15} color="var(--ink-3)" />
+              </button>
+            ))
+          ) : null}
 
-          {activeTab === 'marketplace' && (
-            <div className="px-5 py-8 text-center text-ink-3 text-sm">
-              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-[4px] bg-ivory-2 text-ink-2">
+          {activeTab === 'marketplace' ? (
+            <div style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--ink-3)' }}>
+              <div style={{ width: '52px', height: '52px', margin: '0 auto 12px', borderRadius: '16px', background: 'var(--ivory-2)', display: 'grid', placeItems: 'center', color: 'var(--ink-2)' }}>
                 <Store size={18} />
               </div>
-              <p>Marketplace search is still a Phase 2 follow-up inside this overlay.</p>
-              <p className="mt-1 text-ink-3">
-                Browse the full marketplace to explore live listings.
-              </p>
+              <p style={{ margin: 0, fontSize: '14px' }}>Marketplace search is still a Phase 2 follow-up inside this overlay.</p>
+              <p style={{ margin: '8px 0 0', fontSize: '13px' }}>Browse the full marketplace to explore live listings.</p>
             </div>
-          )}
+          ) : null}
 
-          {!hasResults && query.length > 2 && (
-            <div className="px-5 py-6 text-center">
-              <p className="text-ink-3 text-sm mb-3">
+          {!hasResults && query.length > 2 ? (
+            <div style={{ padding: '28px 20px', textAlign: 'center' }}>
+              <p style={{ margin: '0 0 12px', color: 'var(--ink-3)', fontSize: '14px' }}>
                 Can&apos;t find it? Describe what you need and AI will generate it.
               </p>
               <button
@@ -169,13 +160,13 @@ const FormulaSearchBar = ({ isOpen, onClose, onInsert, onAIGenerate }) => {
                   onClose();
                   onAIGenerate(query);
                 }}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-[3px] border border-ivory-3 text-ink hover:border-ink-3 transition-all"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', padding: '12px 16px', borderRadius: '12px', border: '1px solid var(--ivory-3)', background: 'white', color: 'var(--ink)' }}
               >
                 <Sparkles size={16} />
                 Generate with AI
               </button>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

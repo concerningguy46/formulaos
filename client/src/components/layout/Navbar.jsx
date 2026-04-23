@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Grid3X3, BookOpen, Store, LogIn, LogOut, User, Menu, X, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import useAuthStore from '../../store/authStore';
+import Button from '../ui/Button';
 
 /**
  * Top navigation bar — responsive with mobile hamburger menu.
@@ -27,14 +28,27 @@ const Navbar = () => {
   const isActive = (path) => location.pathname === path;
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-ivory-3">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center justify-between h-16">
+    <nav
+      className="fixed top-0 left-0 right-0 z-40"
+      style={{
+        background: 'rgba(255,255,255,0.92)',
+        backdropFilter: 'blur(14px)',
+        borderBottom: '1px solid var(--ivory-3)',
+      }}
+    >
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 18px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px', gap: '16px' }}>
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5 group">
+          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
             <div
-              className="w-9 h-9 flex items-center justify-center text-sm transition-transform group-hover:scale-105"
               style={{
+                width: '38px',
+                height: '38px',
+                display: 'grid',
+                placeItems: 'center',
+                border: '1px solid var(--ivory-3)',
+                borderRadius: '10px',
+                background: 'linear-gradient(180deg, #fff, #f7f4ef)',
                 fontFamily: '"Instrument Serif", serif',
                 fontStyle: 'italic',
                 color: 'var(--ink)',
@@ -43,8 +57,15 @@ const Navbar = () => {
               FO
             </div>
             <span
-              className="hidden sm:flex items-center gap-2 text-[15px]"
-              style={{ fontFamily: '"Instrument Serif", serif', fontStyle: 'italic', color: 'var(--ink)' }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontFamily: '"Instrument Serif", serif',
+                fontStyle: 'italic',
+                color: 'var(--ink)',
+                fontSize: '16px',
+              }}
             >
               FormulaOS
               <span className="status-chip">
@@ -55,16 +76,24 @@ const Navbar = () => {
           </Link>
 
           {/* Desktop Nav Links */}
-          <div className="hidden md:flex items-center gap-1">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: '1', justifyContent: 'center' }}>
             {navLinks.map(({ to, label, icon: Icon }) => (
               <Link
                 key={to}
                 to={to}
-                className={`flex items-center gap-2 px-4 py-2 rounded text-[11px] uppercase tracking-[0.12em] transition-all ${
-                  isActive(to)
-                    ? 'text-ink'
-                    : 'text-ink-3 hover:text-ink'
-                }`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 12px',
+                  borderRadius: '8px',
+                  textDecoration: 'none',
+                  fontSize: '11px',
+                  letterSpacing: '0.12em',
+                  textTransform: 'uppercase',
+                  color: isActive(to) ? 'var(--ink)' : 'var(--ink-3)',
+                  background: isActive(to) ? 'rgba(0,212,170,0.08)' : 'transparent',
+                }}
               >
                 <Icon size={16} />
                 {label}
@@ -73,33 +102,33 @@ const Navbar = () => {
           </div>
 
           {/* Auth Section */}
-          <div className="hidden md:flex items-center gap-3">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             {user ? (
-              <div className="flex items-center gap-3">
-                  <Link
-                    to={`/profile/${user._id}`}
-                  className="flex items-center gap-2 text-sm text-ink-2 hover:text-ink transition-colors"
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <Link
+                  to={`/profile/${user._id}`}
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--ink-2)', textDecoration: 'none' }}
                 >
-                  <div className="w-7 h-7 rounded-full bg-ivory-2 flex items-center justify-center">
+                  <div style={{ width: '28px', height: '28px', borderRadius: '999px', background: 'var(--ivory-2)', display: 'grid', placeItems: 'center' }}>
                     <User size={14} />
                   </div>
                   <span>{user.name}</span>
                 </Link>
-                <button
-                  onClick={handleLogout}
-                  className="btn-ghost text-sm flex items-center gap-1.5"
-                >
-                  <LogOut size={14} />
+                <Button variant="ghost" size="sm" onClick={handleLogout} icon={LogOut}>
                   Logout
-                </button>
+                </Button>
               </div>
             ) : (
-              <div className="flex items-center gap-2">
-                <Link to="/login" className="btn-ghost text-sm">
-                  Log in
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Link to="/login" style={{ textDecoration: 'none' }}>
+                  <Button variant="ghost" size="sm">
+                    Log in
+                  </Button>
                 </Link>
-                <Link to="/register" className="btn-gold text-sm">
-                  Sign up free
+                <Link to="/register" style={{ textDecoration: 'none' }}>
+                  <Button variant="gold" size="sm">
+                    Sign up free
+                  </Button>
                 </Link>
               </div>
             )}
@@ -108,7 +137,16 @@ const Navbar = () => {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="md:hidden p-2 text-ink-3 hover:text-ink"
+            style={{
+              display: 'grid',
+              placeItems: 'center',
+              width: '42px',
+              height: '42px',
+              borderRadius: '10px',
+              border: '1px solid var(--ivory-3)',
+              background: 'white',
+              color: 'var(--ink-2)',
+            }}
           >
             {mobileOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
@@ -116,29 +154,50 @@ const Navbar = () => {
 
         {/* Mobile Menu */}
         {mobileOpen && (
-          <div className="md:hidden pb-4 animate-slideInUp">
-            <div className="flex flex-col gap-1 pt-2">
+          <div style={{ paddingBottom: '16px', animation: 'slideInUp 0.3s ease-out' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', paddingTop: '8px' }}>
               {navLinks.map(({ to, label, icon: Icon }) => (
                 <Link
                   key={to}
                   to={to}
                   onClick={() => setMobileOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded text-[11px] uppercase tracking-[0.12em] ${
-                    isActive(to)
-                      ? 'text-ink'
-                      : 'text-ink-3 hover:text-ink'
-                  }`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '12px 14px',
+                    textDecoration: 'none',
+                    borderRadius: '10px',
+                    fontSize: '11px',
+                    letterSpacing: '0.12em',
+                    textTransform: 'uppercase',
+                    color: isActive(to) ? 'var(--ink)' : 'var(--ink-3)',
+                    background: isActive(to) ? 'rgba(0,212,170,0.08)' : 'transparent',
+                  }}
                 >
                   <Icon size={16} />
                   {label}
                 </Link>
               ))}
 
-              <div className="border-t border-ivory-3 mt-2 pt-2">
+              <div style={{ borderTop: '1px solid var(--ivory-3)', marginTop: '10px', paddingTop: '10px' }}>
                 {user ? (
                   <button
-                    onClick={() => { handleLogout(); setMobileOpen(false); }}
-                    className="flex items-center gap-3 px-4 py-3 rounded text-sm text-ink-2 hover:text-ink w-full"
+                    onClick={() => {
+                      handleLogout();
+                      setMobileOpen(false);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      width: '100%',
+                      padding: '12px 14px',
+                      borderRadius: '10px',
+                      border: '1px solid var(--ivory-3)',
+                      background: 'white',
+                      color: 'var(--ink-2)',
+                    }}
                   >
                     <LogOut size={16} />
                     Logout
@@ -148,7 +207,7 @@ const Navbar = () => {
                     <Link
                       to="/login"
                       onClick={() => setMobileOpen(false)}
-                      className="flex items-center gap-3 px-4 py-3 rounded text-sm text-ink-2"
+                      style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', color: 'var(--ink-2)', textDecoration: 'none' }}
                     >
                       <LogIn size={16} />
                       Log in
@@ -156,9 +215,11 @@ const Navbar = () => {
                     <Link
                       to="/register"
                       onClick={() => setMobileOpen(false)}
-                      className="btn-gold text-sm mx-4 mt-2 text-center"
+                      style={{ display: 'block', margin: '8px 14px 0', textAlign: 'center', textDecoration: 'none' }}
                     >
-                      Sign up free
+                      <Button variant="gold" size="sm" className="w-full">
+                        Sign up free
+                      </Button>
                     </Link>
                   </>
                 )}

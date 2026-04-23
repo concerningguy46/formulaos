@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import SpreadsheetGrid from '../components/spreadsheet/SpreadsheetGrid';
 import FormulaBar from '../components/spreadsheet/FormulaBar';
 import Toolbar from '../components/spreadsheet/Toolbar';
@@ -7,10 +7,6 @@ import SaveFormulaModal from '../components/formula/SaveFormulaModal';
 import FormulaExplainer from '../components/formula/FormulaExplainer';
 import AIGenerator from '../components/ai/AIGenerator';
 
-/**
- * Editor page - main spreadsheet workspace.
- * Assembles grid, toolbar, formula bar, search, AI, and explainer.
- */
 const EditorPage = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
@@ -19,42 +15,34 @@ const EditorPage = () => {
   const [currentFormula, setCurrentFormula] = useState('');
   const [aiPrompt, setAiPrompt] = useState('');
 
-  const handleSearch = useCallback(() => {
-    setSearchOpen(true);
-  }, []);
-
+  const handleSearch = useCallback(() => setSearchOpen(true), []);
   const handleSave = useCallback((formula) => {
     setCurrentFormula(formula);
     setSaveModalOpen(true);
   }, []);
-
   const handleExplain = useCallback((formula) => {
     setCurrentFormula(formula);
     setExplainerOpen(true);
   }, []);
-
   const handleAI = useCallback(() => {
     setAiPrompt('');
     setAiOpen(true);
   }, []);
-
   const handleAIFromSearch = useCallback((query) => {
     setAiPrompt(query);
     setAiOpen(true);
   }, []);
-
   const handleInsertFormula = useCallback((syntax) => {
     navigator.clipboard.writeText(syntax).then(() => {
       const toast = document.createElement('div');
-      toast.className =
-        'fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-[3px] bg-white border border-ivory-3 text-ink text-xs font-medium shadow-sm animate-slideInUp';
       toast.textContent = 'Formula copied. Paste into the active cell.';
+      toast.style.cssText =
+        'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:50;padding:12px 16px;border-radius:10px;background:white;border:1px solid var(--ivory-3);color:var(--ink);font-size:12px;box-shadow:0 20px 40px rgba(28,26,23,0.08);';
       document.body.appendChild(toast);
-      setTimeout(() => toast.remove(), 3000);
+      setTimeout(() => toast.remove(), 2500);
     });
   }, []);
-
-  const handleAISave = useCallback((formula, name) => {
+  const handleAISave = useCallback((formula) => {
     setCurrentFormula(formula);
     setSaveModalOpen(true);
   }, []);
@@ -77,9 +65,14 @@ const EditorPage = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-ivory">
+    <div
+      style={{
+        minHeight: '100vh',
+        background:
+          'radial-gradient(circle at top left, rgba(0,212,170,0.08), transparent 28%), linear-gradient(180deg, #f7f4ef 0%, #fbfaf7 60%, #f7f4ef 100%)',
+      }}
+    >
       <Toolbar onImport={handleImport} onExport={handleExport} />
-
       <FormulaBar
         onSearch={handleSearch}
         onSave={handleSave}
@@ -87,9 +80,9 @@ const EditorPage = () => {
         onAI={handleAI}
       />
 
-      <div className="flex-1 relative">
+      <main style={{ maxWidth: '1440px', margin: '0 auto', padding: '18px 16px 24px' }}>
         <SpreadsheetGrid />
-      </div>
+      </main>
 
       <FormulaSearchBar
         isOpen={searchOpen}

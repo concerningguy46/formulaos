@@ -2,79 +2,68 @@ import Badge from '../ui/Badge';
 import { Pencil, Trash2, Upload, Hash, Clock } from 'lucide-react';
 import { formatDate, formatCount } from '../../utils/formatters';
 
-/**
- * Formula card — displays a formula in the library grid.
- * Shows name, description, syntax (collapsed), tags, usage count.
- */
 const FormulaCard = ({ formula, onEdit, onDelete, onUpload, onInsert }) => {
   return (
-    <div className="glass-card p-5 flex flex-col group">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1 min-w-0">
-          <h3 className="font-medium text-ink text-sm truncate">{formula.name}</h3>
-          {formula.description && (
-            <p className="text-xs text-ink-3 mt-1 line-clamp-2">{formula.description}</p>
-          )}
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+        padding: '20px',
+        borderRadius: '16px',
+        border: '1px solid var(--ivory-3)',
+        background: 'rgba(255,255,255,0.96)',
+        boxShadow: '0 20px 50px rgba(28, 26, 23, 0.06)',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {formula.name}
+          </h3>
+          {formula.description ? <p style={{ margin: '6px 0 0', fontSize: '13px', color: 'var(--ink-3)', lineHeight: 1.5 }}>{formula.description}</p> : null}
         </div>
-        {formula.isPublic && (
-          <Badge variant="teal" className="ml-2 flex-shrink-0">Public</Badge>
-        )}
+        {formula.isPublic ? <Badge variant="teal">Public</Badge> : null}
       </div>
 
-      {/* Formula Syntax */}
-      <div className="px-3 py-2 rounded-[4px] bg-ivory-2 border border-ivory-3 mb-3">
-        <code className="text-xs text-ink font-mono break-all line-clamp-2">{formula.syntax}</code>
+      <div style={{ padding: '12px 14px', borderRadius: '12px', background: 'var(--ivory-2)', border: '1px solid var(--ivory-3)' }}>
+        <code style={{ fontSize: '12px', color: 'var(--ink)', fontFamily: 'monospace', wordBreak: 'break-word' }}>{formula.syntax}</code>
       </div>
 
-      {/* Tags */}
-      {formula.tags && formula.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-3">
+      {formula.tags?.length ? (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
           {formula.tags.slice(0, 4).map((tag) => (
             <Badge key={tag}>{tag}</Badge>
           ))}
-          {formula.tags.length > 4 && (
-            <Badge>+{formula.tags.length - 4}</Badge>
-          )}
+          {formula.tags.length > 4 ? <Badge>+{formula.tags.length - 4}</Badge> : null}
         </div>
-      )}
+      ) : null}
 
-      {/* Stats */}
-      <div className="flex items-center gap-4 text-xs text-ink-3 mt-auto pt-3 border-t border-ivory-3">
-        <span className="flex items-center gap-1">
-          <Hash size={12} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: 'auto', paddingTop: '14px', borderTop: '1px solid var(--ivory-3)', fontSize: '12px', color: 'var(--ink-3)' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Hash size={12} color="var(--ink-3)" />
           {formatCount(formula.usageCount || 0)} uses
         </span>
-        <span className="flex items-center gap-1">
-          <Clock size={12} />
+        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Clock size={12} color="var(--ink-3)" />
           {formatDate(formula.createdAt)}
         </span>
       </div>
 
-      {/* Actions (show on hover) */}
-      <div className="flex items-center gap-1 mt-3 pt-3 border-t border-ivory-3 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingTop: '14px', borderTop: '1px solid var(--ivory-3)' }}>
         <button
           onClick={() => onInsert?.(formula)}
-          className="flex-1 py-1.5 rounded-[3px] text-[11px] uppercase tracking-[0.08em] text-ink-2 bg-transparent border border-ivory-3 hover:border-ink-3 transition-colors"
+          style={{ flex: 1, padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--ivory-3)', background: 'white', color: 'var(--ink-2)', fontSize: '11px', letterSpacing: '0.08em', textTransform: 'uppercase' }}
         >
           Insert
         </button>
-        <button
-          onClick={() => onEdit?.(formula)}
-          className="p-1.5 rounded text-ink-3 hover:text-ink hover:bg-ivory-2 transition-colors"
-        >
+        <button onClick={() => onEdit?.(formula)} style={{ width: '36px', height: '36px', borderRadius: '10px', border: '1px solid var(--ivory-3)', background: 'white', color: 'var(--ink-3)' }}>
           <Pencil size={13} />
         </button>
-        <button
-          onClick={() => onUpload?.(formula)}
-          className="p-1.5 rounded text-ink-3 hover:text-teal transition-colors"
-        >
+        <button onClick={() => onUpload?.(formula)} style={{ width: '36px', height: '36px', borderRadius: '10px', border: '1px solid var(--ivory-3)', background: 'white', color: 'var(--ink-3)' }}>
           <Upload size={13} />
         </button>
-        <button
-          onClick={() => onDelete?.(formula)}
-          className="p-1.5 rounded text-ink-3 hover:text-danger transition-colors"
-        >
+        <button onClick={() => onDelete?.(formula)} style={{ width: '36px', height: '36px', borderRadius: '10px', border: '1px solid var(--ivory-3)', background: 'white', color: 'var(--danger)' }}>
           <Trash2 size={13} />
         </button>
       </div>

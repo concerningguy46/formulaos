@@ -3,17 +3,52 @@
  */
 const Badge = ({ children, variant = 'default', className = '' }) => {
   const variants = {
-    default: 'bg-ivory-2 text-ink-2 border-transparent',
-    teal: 'bg-teal-bg text-teal-text border-transparent',
-    gold: 'bg-ivory-2 text-ink-2 border-transparent',
-    outline: 'bg-transparent text-ink-2 border-ivory-3',
-    dark: 'bg-ink text-ivory border-transparent',
-    danger: 'bg-transparent text-danger border-danger/30',
+    default: {
+      background: 'var(--ivory-2)',
+      color: 'var(--ink-2)',
+      border: '1px solid transparent',
+    },
+    teal: {
+      background: 'var(--teal-bg)',
+      color: 'var(--teal-text)',
+      border: '1px solid transparent',
+    },
+    gold: {
+      background: 'var(--ivory-2)',
+      color: 'var(--ink-2)',
+      border: '1px solid transparent',
+    },
+    outline: {
+      background: 'transparent',
+      color: 'var(--ink-2)',
+      border: '1px solid var(--ivory-3)',
+    },
+    dark: {
+      background: 'var(--ink)',
+      color: 'var(--ivory)',
+      border: '1px solid transparent',
+    },
+    danger: {
+      background: 'transparent',
+      color: 'var(--danger)',
+      border: '1px solid rgba(185, 74, 69, 0.3)',
+    },
   };
 
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-[2px] text-[10px] font-medium tracking-[0.08em] uppercase border ${variants[variant]} ${className}`}
+      className={className}
+      style={{
+        ...variants[variant],
+        display: 'inline-flex',
+        alignItems: 'center',
+        padding: '4px 10px',
+        borderRadius: '2px',
+        fontSize: '10px',
+        fontWeight: 600,
+        letterSpacing: '0.08em',
+        textTransform: 'uppercase',
+      }}
     >
       {children}
     </span>

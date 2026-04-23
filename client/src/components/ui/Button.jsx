@@ -15,22 +15,57 @@ const Button = ({
   ...props
 }) => {
   const variantClasses = {
-    primary: 'btn-primary',
-    secondary: 'btn-secondary',
-    gold: 'btn-gold',
-    danger: 'btn-danger',
-    ghost: 'btn-ghost',
+    primary: {
+      background: 'var(--ink)',
+      color: 'white',
+      border: '1px solid var(--ink)',
+    },
+    secondary: {
+      background: 'white',
+      color: 'var(--ink)',
+      border: '1px solid var(--ivory-3)',
+    },
+    gold: {
+      background: 'var(--teal)',
+      color: 'var(--ink)',
+      border: '1px solid var(--teal)',
+    },
+    danger: {
+      background: 'white',
+      color: 'var(--danger)',
+      border: '1px solid rgba(185, 74, 69, 0.28)',
+    },
+    ghost: {
+      background: 'transparent',
+      color: 'var(--ink-2)',
+      border: '1px solid transparent',
+    },
   };
 
-  const sizeClasses = {
-    sm: 'px-3 py-2 text-[11px]',
-    md: 'px-5 py-2.5 text-[12px]',
-    lg: 'px-6 py-3 text-[12px]',
+  const sizeStyles = {
+    sm: { padding: '10px 12px', fontSize: '11px' },
+    md: { padding: '12px 18px', fontSize: '12px' },
+    lg: { padding: '14px 22px', fontSize: '12px' },
   };
 
   return (
     <button
-      className={`${variantClasses[variant]} ${sizeClasses[size]} inline-flex items-center justify-center gap-2 ${className}`}
+      className={className}
+      style={{
+        ...variantClasses[variant],
+        ...sizeStyles[size],
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '8px',
+        borderRadius: '4px',
+        cursor: 'pointer',
+        fontWeight: 600,
+        letterSpacing: '0.08em',
+        textTransform: 'uppercase',
+        transition: 'transform 0.18s ease, border-color 0.18s ease, background-color 0.18s ease',
+        boxShadow: 'none',
+      }}
       disabled={disabled || loading}
       {...props}
     >

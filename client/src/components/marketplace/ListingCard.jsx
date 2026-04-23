@@ -3,10 +3,6 @@ import { Download, Star, User } from 'lucide-react';
 import Badge from '../ui/Badge';
 import { formatCurrency, formatCount } from '../../utils/formatters';
 
-/**
- * Listing card for marketplace grid.
- * Glassmorphism design with preview info, no raw syntax for paid.
- */
 const ListingCard = ({ listing }) => {
   const isPaid = listing.price > 0;
   const isPack = listing.itemType === 'pack';
@@ -14,64 +10,76 @@ const ListingCard = ({ listing }) => {
   return (
     <Link
       to={`/marketplace/${listing._id}`}
-      className="glass-card p-5 flex flex-col group cursor-pointer"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+        padding: '20px',
+        borderRadius: '16px',
+        border: '1px solid var(--ivory-3)',
+        background: 'rgba(255,255,255,0.96)',
+        boxShadow: '0 20px 50px rgba(28, 26, 23, 0.06)',
+        textDecoration: 'none',
+        color: 'inherit',
+      }}
     >
-      {/* Top row: type badge + price */}
-      <div className="flex items-center justify-between mb-3">
-        <Badge variant={isPack ? 'gold' : 'teal'}>
-          {isPack ? '📦 Pack' : '📐 Formula'}
-        </Badge>
-        <span className={`text-sm font-medium ${isPaid ? 'text-ink' : 'text-ink-2'}`}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+        <Badge variant={isPack ? 'gold' : 'teal'}>{isPack ? 'Pack' : 'Formula'}</Badge>
+        <span style={{ fontSize: '14px', fontWeight: 600, color: isPaid ? 'var(--ink)' : 'var(--ink-2)' }}>
           {formatCurrency(listing.price)}
         </span>
       </div>
 
-      {/* Name */}
-      <h3 className="font-medium text-ink text-sm mb-1 group-hover:text-ink-2 transition-colors">
-        {listing.name}
-      </h3>
+      <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: 'var(--ink)' }}>{listing.name}</h3>
 
-      {/* Description */}
-      {listing.description && (
-        <p className="text-xs text-ink-3 line-clamp-2 mb-3">{listing.description}</p>
-      )}
+      {listing.description ? (
+        <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.6, color: 'var(--ink-3)' }}>
+          {listing.description}
+        </p>
+      ) : null}
 
-      {/* Creator */}
-      {listing.userId && (
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-5 h-5 rounded-full bg-ivory-2 flex items-center justify-center">
-            <User size={10} className="text-ink-3" />
+      {listing.userId ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ width: '22px', height: '22px', borderRadius: '999px', background: 'var(--ivory-2)', display: 'grid', placeItems: 'center' }}>
+            <User size={10} color="var(--ink-3)" />
           </div>
-          <span className="text-xs text-ink-3">{listing.userId.name || 'Anonymous'}</span>
+          <span style={{ fontSize: '12px', color: 'var(--ink-3)' }}>{listing.userId.name || 'Anonymous'}</span>
         </div>
-      )}
+      ) : null}
 
-      {/* Tags */}
-      {listing.tags && listing.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-3">
+      {listing.tags?.length ? (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
           {listing.tags.slice(0, 3).map((tag) => (
-            <span key={tag} className="text-[10px] px-2 py-0.5 rounded-[2px] bg-ivory-2 text-ink-2">
+            <span
+              key={tag}
+              style={{
+                padding: '4px 8px',
+                borderRadius: '999px',
+                background: 'var(--ivory-2)',
+                color: 'var(--ink-2)',
+                fontSize: '10px',
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+              }}
+            >
               {tag}
             </span>
           ))}
         </div>
-      )}
+      ) : null}
 
-      {/* Stats */}
-      <div className="flex items-center gap-4 mt-auto pt-3 border-t border-ivory-3 text-xs text-ink-3">
-        <span className="flex items-center gap-1">
-          <Download size={12} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: 'auto', paddingTop: '14px', borderTop: '1px solid var(--ivory-3)', fontSize: '12px', color: 'var(--ink-3)' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Download size={12} color="var(--ink-3)" />
           {formatCount(listing.downloadCount || 0)}
         </span>
-        {listing.rating > 0 && (
-          <span className="flex items-center gap-1">
-            <Star size={12} className="text-teal" />
+        {listing.rating > 0 ? (
+          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Star size={12} color="var(--teal-text)" />
             {listing.rating.toFixed(1)}
           </span>
-        )}
-        {isPack && listing.formulaIds && (
-          <span>{listing.formulaIds.length} formulas</span>
-        )}
+        ) : null}
+        {isPack && listing.formulaIds ? <span>{listing.formulaIds.length} formulas</span> : null}
       </div>
     </Link>
   );

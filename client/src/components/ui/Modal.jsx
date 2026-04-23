@@ -28,39 +28,68 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
   if (!isOpen) return null;
 
   const sizeClasses = {
-    sm: 'max-w-md',
-    md: 'max-w-lg',
-    lg: 'max-w-2xl',
-    xl: 'max-w-4xl',
+    sm: 420,
+    md: 560,
+    lg: 760,
+    xl: 960,
   };
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 50,
+        display: 'grid',
+        placeItems: 'center',
+        padding: '16px',
+      }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" />
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'rgba(28,26,23,0.18)',
+          backdropFilter: 'blur(4px)',
+        }}
+      />
 
-      {/* Modal */}
       <div
         ref={modalRef}
-        className={`relative w-full ${sizeClasses[size]} surface-panel p-6 animate-scaleIn`}
+        style={{
+          position: 'relative',
+          width: '100%',
+          maxWidth: `${sizeClasses[size]}px`,
+          border: '1px solid var(--ivory-3)',
+          borderRadius: '18px',
+          background: 'rgba(255,255,255,0.98)',
+          boxShadow: '0 30px 80px rgba(28, 26, 23, 0.12)',
+          padding: '24px',
+          zIndex: 1,
+        }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="text-lg font-medium text-ink">{title}</h3>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
+          <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600, color: 'var(--ink)' }}>{title}</h3>
           <button
             onClick={onClose}
-            className="p-1.5 rounded text-ink-3 hover:text-ink hover:bg-ivory-2 transition-colors"
+            style={{
+              width: '36px',
+              height: '36px',
+              display: 'grid',
+              placeItems: 'center',
+              borderRadius: '10px',
+              border: '1px solid var(--ivory-3)',
+              background: 'white',
+              color: 'var(--ink-3)',
+            }}
           >
             <X size={18} />
           </button>
         </div>
 
-        {/* Content */}
         {children}
       </div>
     </div>

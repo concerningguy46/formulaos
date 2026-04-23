@@ -3,10 +3,13 @@ import { Sparkles, Send, Loader2, ArrowDownToLine, Save } from 'lucide-react';
 import { aiService } from '../../services/aiService';
 import Button from '../ui/Button';
 
-/**
- * AI Formula Generator - takes plain English, returns formula + explanation.
- * Accessible from search bar empty state, formula bar, or /ai command.
- */
+const panelStyle = {
+  border: '1px solid var(--ivory-3)',
+  borderRadius: '20px',
+  background: 'rgba(255,255,255,0.98)',
+  boxShadow: '0 28px 80px rgba(28, 26, 23, 0.14)',
+};
+
 const AIGenerator = ({ isOpen, onClose, onInsert, onSave, initialPrompt = '' }) => {
   const [prompt, setPrompt] = useState(initialPrompt);
   const [result, setResult] = useState(null);
@@ -39,141 +42,166 @@ const AIGenerator = ({ isOpen, onClose, onInsert, onSave, initialPrompt = '' }) 
 
   if (!isOpen) return null;
 
-  const promptChips = [
-    'Calculate percentage increase',
-    'Find duplicates in a column',
-    'Show monthly profit margin',
-  ];
+  const promptChips = ['Calculate percentage increase', 'Find duplicates in a column', 'Show monthly profit margin'];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4">
-      <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" onClick={onClose} />
+    <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'grid', placeItems: 'start center', padding: '72px 16px 24px' }}>
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(28,26,23,0.18)', backdropFilter: 'blur(4px)' }} onClick={onClose} />
 
-      <div className="relative w-full max-w-xl surface-panel overflow-hidden animate-scaleIn">
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-ivory-3">
-          <div className="w-8 h-8 rounded-[4px] bg-ivory-2 flex items-center justify-center">
-            <Sparkles size={16} className="text-ink-2" />
+      <div style={{ ...panelStyle, position: 'relative', width: '100%', maxWidth: '720px', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '18px 20px', borderBottom: '1px solid var(--ivory-3)' }}>
+          <div style={{ width: '42px', height: '42px', borderRadius: '14px', display: 'grid', placeItems: 'center', background: 'rgba(0,212,170,0.10)', color: 'var(--teal-text)' }}>
+            <Sparkles size={18} />
           </div>
           <div>
-            <h3 className="font-medium text-ink text-sm">AI Formula Generator</h3>
-            <p className="text-xs text-ink-3">Describe what you need in plain English</p>
+            <h3 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--ink)' }}>AI Formula Generator</h3>
+            <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--ink-3)' }}>Describe what you need in plain English</p>
           </div>
         </div>
 
-        <div className="px-5 pt-4">
-          <div className="flex flex-wrap gap-2 mb-3">
-            {promptChips.map((chip) => (
-              <button
-                key={chip}
-                type="button"
-                onClick={() => setPrompt(chip)}
-                className="rounded-[3px] border border-ivory-3 bg-white px-3 py-1 text-[11px] uppercase tracking-[0.08em] text-ink-3 hover:border-ink-3 hover:text-ink transition-colors"
-              >
-                {chip}
-              </button>
-            ))}
-          </div>
+        <div style={{ padding: '16px 20px 0', display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+          {promptChips.map((chip) => (
+            <button
+              key={chip}
+              type="button"
+              onClick={() => setPrompt(chip)}
+              style={{
+                padding: '9px 12px',
+                borderRadius: '999px',
+                border: '1px solid var(--ivory-3)',
+                background: 'white',
+                color: 'var(--ink-2)',
+                fontSize: '11px',
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+              }}
+            >
+              {chip}
+            </button>
+          ))}
         </div>
 
-        <div className="px-5 py-4">
-          <div className="flex gap-2">
+        <div style={{ padding: '16px 20px 20px', display: 'grid', gap: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '12px' }}>
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder='e.g., "Calculate the percentage increase between last month and this month"'
-              className="input-base flex-1 h-20 resize-none text-sm"
               autoFocus
+              style={{
+                minHeight: '110px',
+                width: '100%',
+                resize: 'vertical',
+                padding: '14px 16px',
+                borderRadius: '14px',
+                border: '1px solid var(--ivory-3)',
+                background: 'white',
+                color: 'var(--ink)',
+                fontSize: '14px',
+                outline: 'none',
+                boxSizing: 'border-box',
+              }}
             />
             <button
               onClick={handleGenerate}
               disabled={!prompt.trim() || loading}
-              className="self-end p-3 rounded-[3px] bg-teal text-ink hover:bg-teal-dim transition-colors disabled:opacity-50"
+              style={{
+                width: '52px',
+                height: '52px',
+                alignSelf: 'end',
+                borderRadius: '16px',
+                border: '1px solid var(--teal)',
+                background: 'var(--teal)',
+                color: 'var(--ink)',
+                display: 'grid',
+                placeItems: 'center',
+                opacity: !prompt.trim() || loading ? 0.55 : 1,
+              }}
             >
               {loading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
             </button>
           </div>
-        </div>
 
-        {error && (
-          <div className="mx-5 mb-4 rounded-[4px] border border-danger/20 bg-transparent px-4 py-2 text-sm text-danger">
-            {error}
-          </div>
-        )}
-
-        {loading && (
-          <div className="px-5 pb-6 flex flex-col items-center gap-3">
-            <div className="w-full h-1 bg-ivory-3 rounded overflow-hidden">
-              <div className="h-full bg-teal animate-shimmer rounded" />
+          {error ? (
+            <div style={{ padding: '12px 14px', borderRadius: '12px', border: '1px solid rgba(185, 74, 69, 0.25)', background: 'rgba(185, 74, 69, 0.05)', color: 'var(--danger)', fontSize: '13px' }}>
+              {error}
             </div>
-            <p className="text-ink-3 text-xs">Generating your formula...</p>
-          </div>
-        )}
+          ) : null}
 
-        {result && !loading && (
-          <div className="px-5 pb-5 space-y-4 animate-fadeIn">
-            <div className="rounded-[4px] border border-ivory-3 bg-white px-4 py-3">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-xs font-medium uppercase text-ink-3">Generated Formula</span>
+          {loading ? (
+            <div style={{ display: 'grid', gap: '10px' }}>
+              <div style={{ width: '100%', height: '6px', borderRadius: '999px', background: 'var(--ivory-2)', overflow: 'hidden' }}>
+                <div style={{ width: '55%', height: '100%', borderRadius: '999px', background: 'linear-gradient(90deg, var(--teal), var(--teal-dim))' }} />
               </div>
-              <code className="block break-all font-mono text-sm font-bold text-ink">
-                {result.formula}
-              </code>
+              <p style={{ margin: 0, fontSize: '12px', color: 'var(--ink-3)' }}>Generating your formula...</p>
             </div>
+          ) : null}
 
-            {result.explanation && result.explanation.length > 0 && (
-              <div>
-                <h4 className="mb-2 text-xs font-medium uppercase text-ink-3">Explanation</h4>
-                <div className="space-y-1.5">
-                  {result.explanation.map((step, i) => (
-                    <div key={i} className="flex gap-2 text-sm">
-                      <span className="mt-0.5 text-xs font-bold text-ink-2">{i + 1}.</span>
-                      <p className="text-ink-2">{step}</p>
-                    </div>
-                  ))}
+          {result && !loading ? (
+            <div style={{ display: 'grid', gap: '16px' }}>
+              <div style={{ border: '1px solid var(--ivory-3)', borderRadius: '14px', background: 'white', padding: '16px' }}>
+                <div style={{ marginBottom: '8px', fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--ink-3)' }}>
+                  Generated Formula
                 </div>
+                <code style={{ display: 'block', wordBreak: 'break-word', fontFamily: 'monospace', color: 'var(--ink)' }}>{result.formula}</code>
               </div>
-            )}
 
-            {result.assumptions && result.assumptions.length > 0 && (
-              <div className="rounded-[4px] border border-ivory-3 px-3 py-2 text-xs text-ink-3">
-                <span className="font-medium text-ink">Note: </span>
-                {result.assumptions.join('. ')}
+              {result.explanation?.length ? (
+                <div>
+                  <div style={{ marginBottom: '8px', fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--ink-3)' }}>
+                    Explanation
+                  </div>
+                  <div style={{ display: 'grid', gap: '10px' }}>
+                    {result.explanation.map((step, i) => (
+                      <div key={i} style={{ display: 'flex', gap: '10px', fontSize: '14px', color: 'var(--ink-2)' }}>
+                        <span style={{ color: 'var(--teal-text)', fontWeight: 700 }}>{i + 1}.</span>
+                        <p style={{ margin: 0 }}>{step}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {result.assumptions?.length ? (
+                <div style={{ padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--ivory-3)', background: 'rgba(247,244,239,0.6)', fontSize: '13px', color: 'var(--ink-2)' }}>
+                  <strong style={{ color: 'var(--ink)' }}>Note:</strong> {result.assumptions.join('. ')}
+                </div>
+              ) : null}
+
+              {result.usage ? (
+                <div style={{ textAlign: 'right', fontSize: '12px', color: 'var(--ink-3)' }}>
+                  {result.usage.remaining} AI generations remaining this month
+                </div>
+              ) : null}
+
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  icon={ArrowDownToLine}
+                  onClick={() => {
+                    onInsert?.(result.formula);
+                    onClose();
+                  }}
+                >
+                  Insert into Cell
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon={Save}
+                  onClick={() => {
+                    onSave?.(result.formula, result.suggestedName || prompt);
+                    onClose();
+                  }}
+                >
+                  Save to Library
+                </Button>
               </div>
-            )}
-
-            {result.usage && (
-              <div className="text-right text-xs text-ink-3">
-                {result.usage.remaining} AI generations remaining this month
-              </div>
-            )}
-
-            <div className="flex gap-2 pt-2">
-              <Button
-                variant="primary"
-                size="sm"
-                icon={ArrowDownToLine}
-                onClick={() => {
-                  onInsert?.(result.formula);
-                  onClose();
-                }}
-              >
-                Insert into Cell
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                icon={Save}
-                onClick={() => {
-                  onSave?.(result.formula, result.suggestedName || prompt);
-                  onClose();
-                }}
-              >
-                Save to Library
-              </Button>
             </div>
-          </div>
-        )}
+          ) : null}
+        </div>
       </div>
     </div>
   );

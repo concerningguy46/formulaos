@@ -5,197 +5,138 @@ import ListingCard from '../components/marketplace/ListingCard';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { CATEGORIES, SORT_OPTIONS } from '../utils/constants';
 
-/**
- * Marketplace browse page — search, filter, sort public formulas.
- */
 const MarketplacePage = () => {
   const { listings, total, loading, filters, setFilters, fetchListings } = useMarketplaceStore();
   const [showFilters, setShowFilters] = useState(false);
 
-  // Fetch on mount and when filters change
   useEffect(() => {
     fetchListings();
   }, [filters, fetchListings]);
 
   return (
-    <div className="page-shell max-w-7xl mx-auto px-4 sm:px-6 py-8">
-      <div className="hero-panel mb-8 overflow-hidden">
-        <div className="relative px-6 py-8 sm:px-8">
-          <div className="section-kicker mb-4">
+    <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '32px 18px 56px' }}>
+      <div style={{ border: '1px solid var(--ivory-3)', borderRadius: '20px', background: 'linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,244,239,0.92))', boxShadow: '0 20px 50px rgba(28, 26, 23, 0.06)', overflow: 'hidden' }}>
+        <div style={{ padding: '30px' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '999px', border: '1px solid var(--ivory-3)', background: 'white', fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--ink-3)' }}>
             <Store size={13} />
             Marketplace
           </div>
-          <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
+          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '24px', alignItems: 'end', marginTop: '18px' }}>
             <div>
-              <h1
-                className="section-title text-4xl sm:text-5xl"
-                style={{ fontWeight: 400 }}
-              >
+              <h1 style={{ margin: 0, fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 'clamp(2.5rem, 5vw, 4.4rem)', fontWeight: 400, lineHeight: 0.95, color: 'var(--ink)', maxWidth: '12ch' }}>
                 Browse formulas, packs, and the logic people actually reuse.
               </h1>
-              <p className="mt-4 max-w-2xl text-navy-300 leading-relaxed">
-                The marketplace is the platform layer in the PRD. It is here to turn a good
-                spreadsheet trick into something searchable, reusable, and eventually sellable.
+              <p style={{ marginTop: '16px', maxWidth: '760px', lineHeight: 1.7, color: 'var(--ink-2)' }}>
+                The marketplace is the platform layer in the PRD. It is here to turn a good spreadsheet trick into something searchable, reusable, and eventually sellable.
               </p>
             </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="metric-chip text-center">
-                <div className="text-2xl font-bold text-teal">Live</div>
-                <div className="mt-1 text-[11px] uppercase tracking-[0.18em] text-navy-500">
-                  Browse
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '12px' }}>
+              {[
+                ['Live', 'Browse', 'teal'],
+                ['Soon', 'Packs', 'gold'],
+                ['Next', 'Payments', 'teal'],
+              ].map(([value, label, tone]) => (
+                <div key={label} style={{ padding: '16px', borderRadius: '16px', border: '1px solid var(--ivory-3)', background: 'white', textAlign: 'center' }}>
+                  <div style={{ fontSize: '2rem', fontWeight: 700, color: tone === 'gold' ? 'var(--warning)' : 'var(--teal)' }}>{value}</div>
+                  <div style={{ marginTop: '6px', fontSize: '11px', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--ink-3)' }}>{label}</div>
                 </div>
-              </div>
-              <div className="metric-chip text-center">
-                <div className="text-2xl font-bold text-gold">Soon</div>
-                <div className="mt-1 text-[11px] uppercase tracking-[0.18em] text-navy-500">
-                  Packs
-                </div>
-              </div>
-              <div className="metric-chip text-center">
-                <div className="text-2xl font-bold text-teal">Next</div>
-                <div className="mt-1 text-[11px] uppercase tracking-[0.18em] text-navy-500">
-                  Payments
-                </div>
-              </div>
+              ))}
             </div>
           </div>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-[4px] border border-ivory-3 bg-white p-4">
-              <div className="flex items-center gap-2 text-sm text-navy-400">
-                <Sparkles size={15} className="text-teal" />
-                Discovery
+          <div style={{ marginTop: '18px', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '12px' }}>
+            {[
+              ['Discovery', 'Search and sort public formulas.', Sparkles, 'teal'],
+              ['Trending', 'The homepage can later surface weekly bestsellers.', TrendingUp, 'gold'],
+              ['Downloads', 'Free items are ready to browse and open.', Download, 'teal'],
+            ].map(([title, desc, Icon, tone]) => (
+              <div key={title} style={{ border: '1px solid var(--ivory-3)', borderRadius: '16px', background: 'white', padding: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--ink-2)', fontSize: '14px' }}>
+                  <Icon size={15} color={tone === 'gold' ? 'var(--warning)' : 'var(--teal-text)'} />
+                  {title}
+                </div>
+                <p style={{ margin: '10px 0 0', color: 'var(--ink-3)', fontSize: '13px', lineHeight: 1.6 }}>{desc}</p>
               </div>
-              <p className="mt-2 text-sm text-navy-200">Search and sort public formulas.</p>
-            </div>
-            <div className="rounded-[4px] border border-ivory-3 bg-white p-4">
-              <div className="flex items-center gap-2 text-sm text-navy-400">
-                <TrendingUp size={15} className="text-gold" />
-                Trending
-              </div>
-              <p className="mt-2 text-sm text-navy-200">The homepage can later surface weekly bestsellers.</p>
-            </div>
-            <div className="rounded-[4px] border border-ivory-3 bg-white p-4">
-              <div className="flex items-center gap-2 text-sm text-navy-400">
-                <Download size={15} className="text-teal" />
-                Downloads
-              </div>
-              <p className="mt-2 text-sm text-navy-200">Free items are ready to browse and open.</p>
-            </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Search + Filter Bar */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <div className="relative flex-1">
-          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-navy-400" />
-          <input
-            type="text"
-            value={filters.search}
-            onChange={(e) => setFilters({ search: e.target.value })}
-            placeholder="Search marketplace..."
-            className="input-search w-full pl-11"
-          />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '24px', marginBottom: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '12px' }}>
+          <div style={{ position: 'relative' }}>
+            <Search size={18} color="var(--ink-3)" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
+            <input
+              type="text"
+              value={filters.search}
+              onChange={(e) => setFilters({ search: e.target.value })}
+              placeholder="Search marketplace..."
+              style={{ width: '100%', padding: '14px 16px 14px 46px', borderRadius: '14px', border: '1px solid var(--ivory-3)', background: 'white', color: 'var(--ink)', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            style={{ padding: '14px 16px', borderRadius: '14px', border: '1px solid var(--ivory-3)', background: showFilters ? 'rgba(0,212,170,0.08)' : 'white', color: showFilters ? 'var(--teal-text)' : 'var(--ink-2)', display: 'inline-flex', alignItems: 'center', gap: '10px', fontWeight: 600 }}
+          >
+            <SlidersHorizontal size={16} />
+            Filters
+          </button>
         </div>
 
-        <button
-          onClick={() => setShowFilters(!showFilters)}
-          className={`flex items-center gap-2 px-4 py-3 rounded-[3px] border transition-all ${
-            showFilters
-              ? 'bg-teal-bg border-ivory-3 text-teal-text'
-              : 'bg-white border-ivory-3 text-ink-2 hover:text-ink'
-          }`}
-        >
-          <SlidersHorizontal size={16} />
-          Filters
-        </button>
-      </div>
-
-      {/* Filter Panel */}
-      {showFilters && (
-        <div className="glass-card-static p-4 mb-6 animate-slideInUp">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {/* Category */}
-            <div>
-              <label className="block text-xs font-medium text-navy-400 mb-1.5">Category</label>
-              <select
-                value={filters.category}
-                onChange={(e) => setFilters({ category: e.target.value })}
-                className="input-base w-full text-sm"
-              >
-                {CATEGORIES.map((cat) => (
-                  <option key={cat.value} value={cat.value}>
-                    {cat.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Sort */}
-            <div>
-              <label className="block text-xs font-medium text-navy-400 mb-1.5">Sort by</label>
-              <select
-                value={filters.sort}
-                onChange={(e) => setFilters({ sort: e.target.value })}
-                className="input-base w-full text-sm"
-              >
-                {SORT_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Type */}
-            <div>
-              <label className="block text-xs font-medium text-navy-400 mb-1.5">Type</label>
-              <select
-                value={filters.type}
-                onChange={(e) => setFilters({ type: e.target.value })}
-                className="input-base w-full text-sm"
-              >
-                <option value="all">All</option>
-                <option value="formula">Formulas</option>
-                <option value="pack">Packs</option>
-              </select>
+        {showFilters ? (
+          <div style={{ padding: '18px', borderRadius: '16px', border: '1px solid var(--ivory-3)', background: 'white' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '16px' }}>
+              {[
+                ['Category', filters.category, (value) => setFilters({ category: value }), CATEGORIES],
+                ['Sort by', filters.sort, (value) => setFilters({ sort: value }), SORT_OPTIONS],
+                ['Type', filters.type, (value) => setFilters({ type: value }), [
+                  { value: 'all', label: 'All' },
+                  { value: 'formula', label: 'Formulas' },
+                  { value: 'pack', label: 'Packs' },
+                ]],
+              ].map(([label, value, onChange, options]) => (
+                <div key={label} style={{ display: 'grid', gap: '8px' }}>
+                  <label style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--ink-3)' }}>{label}</label>
+                  <select value={value} onChange={(e) => onChange(e.target.value)} style={{ padding: '13px 14px', borderRadius: '12px', border: '1px solid var(--ivory-3)', background: 'white', color: 'var(--ink)' }}>
+                    {options.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
-      )}
+        ) : null}
+      </div>
 
-      {/* Results Count */}
-      <div className="text-sm text-navy-500 mb-4">
+      <div style={{ marginBottom: '12px', color: 'var(--ink-3)', fontSize: '14px' }}>
         {total} result{total !== 1 ? 's' : ''} found
       </div>
 
-      {/* Loading */}
-      {loading && <LoadingSpinner message="Browsing marketplace..." />}
+      {loading ? <LoadingSpinner message="Browsing marketplace..." /> : null}
 
-      {/* Empty State */}
-      {!loading && listings.length === 0 && (
-        <div className="surface-panel text-center py-16 animate-fadeIn">
-          <div className="w-20 h-20 rounded-[4px] bg-ivory-2 flex items-center justify-center mx-auto mb-4">
-            <Store size={32} className="text-ink-3" />
+      {!loading && listings.length === 0 ? (
+        <div style={{ padding: '60px 24px', border: '1px solid var(--ivory-3)', borderRadius: '18px', background: 'white', textAlign: 'center' }}>
+          <div style={{ width: '80px', height: '80px', borderRadius: '20px', background: 'var(--ivory-2)', display: 'grid', placeItems: 'center', margin: '0 auto 16px' }}>
+            <Store size={32} color="var(--ink-3)" />
           </div>
-          <h3 className="text-lg font-medium text-ink mb-2">No listings yet</h3>
-          <p className="text-ink-3 text-sm">
-            {filters.search
-              ? `No results for "${filters.search}". Try a different search.`
-              : 'Be the first to upload a formula to the marketplace!'}
+          <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--ink)' }}>No listings yet</h3>
+          <p style={{ margin: '10px 0 0', color: 'var(--ink-3)', fontSize: '14px' }}>
+            {filters.search ? `No results for "${filters.search}". Try a different search.` : 'Be the first to upload a formula to the marketplace!'}
           </p>
         </div>
-      )}
+      ) : null}
 
-      {/* Listings Grid */}
-      {!loading && listings.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 stagger-children">
+      {!loading && listings.length > 0 ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
           {listings.map((listing) => (
             <ListingCard key={listing._id} listing={listing} />
           ))}
         </div>
-      )}
+      ) : null}
     </div>
   );
 };
