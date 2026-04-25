@@ -12,11 +12,11 @@ const useAuthStore = create((set, get) => ({
   error: null,
 
   /** Register a new user */
-  register: async (name, email, password) => {
+  register: async (username, password) => {
     set({ loading: true, error: null });
     try {
-      const result = await authService.register(name, email, password);
-      const { token, ...user } = result.data;
+      const result = await authService.register(username, password);
+      const { token, ...user } = result;
 
       localStorage.setItem('formulaos_token', token);
       localStorage.setItem('formulaos_user', JSON.stringify(user));
@@ -29,12 +29,12 @@ const useAuthStore = create((set, get) => ({
     }
   },
 
-  /** Login with email/password */
-  login: async (email, password) => {
+  /** Login with username/password */
+  login: async (username, password) => {
     set({ loading: true, error: null });
     try {
-      const result = await authService.login(email, password);
-      const { token, ...user } = result.data;
+      const result = await authService.login(username, password);
+      const { token, ...user } = result;
 
       localStorage.setItem('formulaos_token', token);
       localStorage.setItem('formulaos_user', JSON.stringify(user));
@@ -47,26 +47,10 @@ const useAuthStore = create((set, get) => ({
     }
   },
 
-  /** Set token from Google OAuth callback */
-  setTokenFromOAuth: async (token) => {
-    localStorage.setItem('formulaos_token', token);
-    set({ token, loading: true });
-
-    try {
-      const result = await authService.getMe();
-      const user = result.data;
-      localStorage.setItem('formulaos_user', JSON.stringify(user));
-      set({ user, loading: false });
-    } catch (error) {
-      set({ loading: false, error: 'Failed to get user profile' });
-    }
-  },
-
   /** Refresh user data from server */
   refreshUser: async () => {
     try {
-      const result = await authService.getMe();
-      const user = result.data;
+      const user = await authService.getMe();
       localStorage.setItem('formulaos_user', JSON.stringify(user));
       set({ user });
     } catch {
@@ -89,3 +73,4 @@ const useAuthStore = create((set, get) => ({
 }));
 
 export default useAuthStore;
+

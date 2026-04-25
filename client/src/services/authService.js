@@ -5,14 +5,14 @@ import api from './api';
  */
 export const authService = {
   /** Register a new user */
-  register: async (name, email, password) => {
-    const { data } = await api.post('/auth/register', { name, email, password });
+  register: async (username, password) => {
+    const { data } = await api.post('/auth/register', { username, password });
     return data;
   },
 
-  /** Login with email/password */
-  login: async (email, password) => {
-    const { data } = await api.post('/auth/login', { email, password });
+  /** Login with username/password */
+  login: async (username, password) => {
+    const { data } = await api.post('/auth/login', { username, password });
     return data;
   },
 
@@ -21,9 +21,5 @@ export const authService = {
     const { data } = await api.get('/auth/me');
     return data;
   },
-
-  /** Get Google OAuth URL */
-  getGoogleAuthUrl: () => {
-    return `${import.meta.env.VITE_API_URL}/auth/google`;
-  },
 };
+

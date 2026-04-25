@@ -1,142 +1,80 @@
-const User = require('../models/User');
-const generateToken = require('../utils/generateToken');
-const { isValidEmail, isValidPassword } = require('../utils/validators');
+require('dotenv').config()
+const User = require('../models/User')
+const jwt = require('jsonwebtoken')
 
-/**
- * Register a new user with email and password.
- * POST /api/auth/register
- */
-const register = async (req, res, next) => {
+const generateToken = (id) => {
+  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' })
+}
+
+exports.register = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { username, password } = req.body
 
-    // Validate inputs
-    if (!name || !email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Name, email, and password are required',
-      });
+    if (!username || !password) {
+      return res.status(400).json({ message: 'Username and password are required' })
     }
 
-    if (!isValidEmail(email)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide a valid email address',
-      });
+    if (username.length < 3) {
+      return res.status(400).json({ message: 'Username must be at least 3 characters' })
     }
 
-    if (!isValidPassword(password)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Password must be at least 6 characters',
-      });
+    if (password.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters' })
     }
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ username })
     if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: 'An account with this email already exists',
-      });
+      return res.status(400).json({ message: 'Username already taken' })
     }
 
-    // Create user
-    const user = await User.create({ name, email, password });
-    const token = generateToken(user._id);
+    const user = await User.create({ username, password })
 
     res.status(201).json({
-      success: true,
-      data: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        plan: user.plan,
-        token,
-      },
-    });
+      _id: user._id,
+      username: user.username,
+      token: generateToken(user._id)
+    })
   } catch (error) {
-    next(error);
+    console.error('Register error:', error)
+    res.status(500).json({ message: 'Server error', error: error.message })
   }
-};
+}
 
-/**
- * Login with email and password.
- * POST /api/auth/login
- */
-const login = async (req, res, next) => {
+exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { username, password } = req.body
 
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email and password are required',
-      });
+    if (!username || !password) {
+      return res.status(400).json({ message: 'Username and password are required' })
     }
 
-    // Find user and include password field for comparison
-    const user = await User.findOne({ email }).select('+password');
-
-    if (!user || !user.password) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid email or password',
-      });
+    const user = await User.findOne({ username })
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid username or password' })
     }
 
-    // Compare passwords
-    const isMatch = await user.comparePassword(password);
-
+    const isMatch = await user.matchPassword(password)
     if (!isMatch) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid email or password',
-      });
+      return res.status(401).json({ message: 'Invalid username or password' })
     }
 
-    const token = generateToken(user._id);
-
     res.json({
-      success: true,
-      data: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        plan: user.plan,
-        token,
-      },
-    });
+      _id: user._id,
+      username: user.username,
+      token: generateToken(user._id)
+    })
   } catch (error) {
-    next(error);
+    console.error('Login error:', error)
+    res.status(500).json({ message: 'Server error', error: error.message })
   }
-};
+}
 
-/**
- * Get current logged-in user's profile.
- * GET /api/auth/me
- */
-const getMe = async (req, res, next) => {
+exports.getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
-    const aiUsage = user.checkAIUsage();
-
-    res.json({
-      success: true,
-      data: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        avatar: user.avatar,
-        bio: user.bio,
-        plan: user.plan,
-        aiUsage,
-        createdAt: user.createdAt,
-      },
-    });
+    const user = await User.findById(req.user._id).select('-password')
+    res.json(user)
   } catch (error) {
-    next(error);
+    res.status(500).json({ message: 'Server error', error: error.message })
   }
-};
+}
 
-module.exports = { register, login, getMe };
