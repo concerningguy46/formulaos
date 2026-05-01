@@ -1,8 +1,7 @@
 const jwt = require('jsonwebtoken')
+const mongoose = require('mongoose')
 const User = require('../models/User')
-const { findUserById, sanitizeUser } = require('../services/authStore')
-
-const JWT_SECRET = process.env.JWT_SECRET || 'formulaos-fallback-jwt-secret'
+const { findUserById, sanitizeUser, getEffectiveJwtSecret } = require('../services/authStore')
 
 const protect = async (req, res, next) => {
   try {
@@ -15,15 +14,26 @@ const protect = async (req, res, next) => {
       return res.status(401).json({ message: 'Not authorized, no token' })
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET)
-    req.user = User.db.readyState === 1
-      ? await User.findById(decoded.id).select('-password')
-      : sanitizeUser(await findUserById(decoded.id))
+    const effectiveSecret = getEffectiveJwtSecret()
+    const decoded = jwt.verify(token, effectiveSecret)
+    
+    let user
+    try {
+      if (mongoose.connection.readyState === 1) {
+        user = await User.findById(decoded.id).select('-password')
+      } else {
+        user = sanitizeUser(await findUserById(decoded.id))
+      }
+    } catch (dbError) {
+      // Fallback to authStore on database error
+      user = sanitizeUser(await findUserById(decoded.id))
+    }
 
-    if (!req.user) {
+    if (!user) {
       return res.status(401).json({ message: 'User not found' })
     }
 
+    req.user = user
     next()
   } catch (error) {
     res.status(401).json({ message: 'Not authorized, token failed' })
@@ -41,10 +51,24 @@ const optionalAuth = async (req, res, next) => {
       return next()
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET)
-    req.user = User.db.readyState === 1
-      ? await User.findById(decoded.id).select('-password')
-      : sanitizeUser(await findUserById(decoded.id))
+    const effectiveSecret = getEffectiveJwtSecret()
+    const decoded = jwt.verify(token, effectiveSecret)
+    
+    let user
+    try {
+      if (mongoose.connection.readyState === 1) {
+        user = await User.findById(decoded.id).select('-password')
+      } else {
+        user = sanitizeUser(await findUserById(decoded.id))
+      }
+    } catch (dbError) {
+      // Fallback to authStore on database error
+      user = sanitizeUser(await findUserById(decoded.id))
+    }
+    
+    if (user) {
+      req.user = user
+    }
     return next()
   } catch {
     return next()

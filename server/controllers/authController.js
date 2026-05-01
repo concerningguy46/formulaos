@@ -8,12 +8,12 @@ const {
   findUserById,
   sanitizeUser,
   verifyPassword,
+  getEffectiveJwtSecret,
 } = require('../services/authStore')
 
-const JWT_SECRET = process.env.JWT_SECRET || 'formulaos-fallback-jwt-secret'
-
 const generateToken = (id) => {
-  return jwt.sign({ id }, JWT_SECRET, { expiresIn: '30d' })
+  const effectiveSecret = getEffectiveJwtSecret()
+  return jwt.sign({ id }, effectiveSecret, { expiresIn: '30d' })
 }
 
 const toPlainUser = (user) => {

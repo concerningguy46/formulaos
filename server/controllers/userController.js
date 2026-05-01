@@ -2,7 +2,7 @@ const User = require('../models/User');
 const Formula = require('../models/Formula');
 const Pack = require('../models/Pack');
 const mongoose = require('mongoose');
-const { findUserById } = require('../services/authStore');
+const { findUserById, sanitizeUser } = require('../services/authStore');
 
 /**
  * Get a creator's public profile with their listings and stats.
@@ -11,7 +11,7 @@ const { findUserById } = require('../services/authStore');
 const getUserProfile = async (req, res, next) => {
   try {
     const useMongo = mongoose.connection.readyState === 1;
-    const user = useMongo
+    let user = useMongo
       ? await User.findById(req.params.id).select('name avatar bio createdAt')
       : await findUserById(req.params.id);
 
@@ -20,6 +20,13 @@ const getUserProfile = async (req, res, next) => {
         success: false,
         message: 'User not found',
       });
+    }
+
+    // Normalize to public shape for both Mongo and authStore paths
+    if (!useMongo) {
+      user = sanitizeUser(user)
+      const { name, avatar, bio, createdAt } = user || {}
+      user = { name, avatar, bio, createdAt }
     }
 
     if (!useMongo) {
