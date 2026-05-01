@@ -1,6 +1,8 @@
 const User = require('../models/User');
 const Formula = require('../models/Formula');
 const Pack = require('../models/Pack');
+const mongoose = require('mongoose');
+const { findUserById } = require('../services/authStore');
 
 /**
  * Get a creator's public profile with their listings and stats.
@@ -8,12 +10,32 @@ const Pack = require('../models/Pack');
  */
 const getUserProfile = async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id).select('name avatar bio createdAt');
+    const useMongo = mongoose.connection.readyState === 1;
+    const user = useMongo
+      ? await User.findById(req.params.id).select('name avatar bio createdAt')
+      : await findUserById(req.params.id);
 
     if (!user) {
       return res.status(404).json({
         success: false,
         message: 'User not found',
+      });
+    }
+
+    if (!useMongo) {
+      return res.json({
+        success: true,
+        data: {
+          user,
+          formulas: [],
+          packs: [],
+          stats: {
+            totalFormulas: 0,
+            totalPacks: 0,
+            totalDownloads: 0,
+            avgRating: 0,
+          },
+        },
       });
     }
 

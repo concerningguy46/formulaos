@@ -77,9 +77,11 @@ app.use('/api/sheets', sheetRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
+  const mongoConnected = mongoose.connection.readyState === 1;
   res.json({
     status: 'ok',
-    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    mongodb: mongoConnected ? 'connected' : 'disconnected',
+    authStorage: mongoConnected ? 'mongo' : 'file',
     ai: process.env.GEMINI_API_KEY ? 'configured' : 'missing key',
     payments: process.env.STRIPE_SECRET_KEY !== 'disabled' ? 'configured' : 'disabled',
     googleAuth: process.env.GOOGLE_CLIENT_ID !== 'disabled' ? 'configured' : 'disabled',

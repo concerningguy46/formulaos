@@ -1,5 +1,8 @@
 const jwt = require('jsonwebtoken')
 const User = require('../models/User')
+const { findUserById, sanitizeUser } = require('../services/authStore')
+
+const JWT_SECRET = process.env.JWT_SECRET || 'formulaos-fallback-jwt-secret'
 
 const protect = async (req, res, next) => {
   try {
@@ -12,8 +15,10 @@ const protect = async (req, res, next) => {
       return res.status(401).json({ message: 'Not authorized, no token' })
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET)
-    req.user = await User.findById(decoded.id).select('-password')
+    const decoded = jwt.verify(token, JWT_SECRET)
+    req.user = User.db.readyState === 1
+      ? await User.findById(decoded.id).select('-password')
+      : sanitizeUser(await findUserById(decoded.id))
 
     if (!req.user) {
       return res.status(401).json({ message: 'User not found' })
@@ -36,8 +41,10 @@ const optionalAuth = async (req, res, next) => {
       return next()
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET)
-    req.user = await User.findById(decoded.id).select('-password')
+    const decoded = jwt.verify(token, JWT_SECRET)
+    req.user = User.db.readyState === 1
+      ? await User.findById(decoded.id).select('-password')
+      : sanitizeUser(await findUserById(decoded.id))
     return next()
   } catch {
     return next()
