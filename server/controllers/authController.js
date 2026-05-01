@@ -2,8 +2,10 @@ require('dotenv').config()
 const User = require('../models/User')
 const jwt = require('jsonwebtoken')
 
+const JWT_SECRET = process.env.JWT_SECRET || 'formulaos-fallback-jwt-secret'
+
 const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' })
+  return jwt.sign({ id }, JWT_SECRET, { expiresIn: '30d' })
 }
 
 exports.register = async (req, res) => {
@@ -77,4 +79,3 @@ exports.getMe = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message })
   }
 }
-
