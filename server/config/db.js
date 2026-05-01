@@ -6,7 +6,11 @@ const mongoose = require('mongoose');
  */
 const connectDB = async () => {
   if (!process.env.MONGODB_URI) {
-    console.warn('⚠️  MONGODB_URI is not set. Starting server without a database connection.');
+    const message = 'MONGODB_URI is not set.';
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(message);
+    }
+    console.warn(`⚠️  ${message} Starting server without a database connection.`);
     return false;
   }
 
@@ -16,6 +20,9 @@ const connectDB = async () => {
     return true;
   } catch (error) {
     console.error(`❌ MongoDB connection error: ${error.message}`);
+    if (process.env.NODE_ENV === 'production') {
+      throw error;
+    }
     return false;
   }
 };

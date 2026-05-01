@@ -1,4 +1,5 @@
 require('dotenv').config()
+const mongoose = require('mongoose')
 const User = require('../models/User')
 const jwt = require('jsonwebtoken')
 
@@ -8,8 +9,22 @@ const generateToken = (id) => {
   return jwt.sign({ id }, JWT_SECRET, { expiresIn: '30d' })
 }
 
+const ensureDatabaseReady = (res) => {
+  if (mongoose.connection.readyState !== 1) {
+    res.status(503).json({
+      message: 'Database unavailable',
+      error: 'MongoDB is not connected on the server',
+    })
+    return false
+  }
+
+  return true
+}
+
 exports.register = async (req, res) => {
   try {
+    if (!ensureDatabaseReady(res)) return
+
     const { username, password } = req.body
 
     if (!username || !password) {
@@ -44,6 +59,8 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
+    if (!ensureDatabaseReady(res)) return
+
     const { username, password } = req.body
 
     if (!username || !password) {
@@ -73,6 +90,8 @@ exports.login = async (req, res) => {
 
 exports.getMe = async (req, res) => {
   try {
+    if (!ensureDatabaseReady(res)) return
+
     const user = await User.findById(req.user._id).select('-password')
     res.json(user)
   } catch (error) {
