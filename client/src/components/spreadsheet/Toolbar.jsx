@@ -393,6 +393,139 @@ const showToast = (msg) => {
     }
   }
 
+  const columnToLabel = index => {
+    let n = index + 1
+    let label = ''
+
+    while (n > 0) {
+      const rem = (n - 1) % 26
+      label = String.fromCharCode(65 + rem) + label
+      n = Math.floor((n - 1) / 26)
+    }
+
+    return label
+  }
+
+  const getCellValueAt = (row, column) => {
+    const workbook = getWorkbook()
+    if (!workbook) return ''
+
+    try {
+      return workbook.getCellValue?.(row, column) ?? ''
+    } catch {
+      return ''
+    }
+  }
+
+  const isNumericCell = (value) => {
+    if (value == null || value === '') return false
+    const raw = typeof value === 'object'
+      ? (value?.m ?? value?.v ?? value?.value ?? '')
+      : value
+    if (raw === '') return false
+    return !Number.isNaN(Number(raw))
+  }
+
+  const findAutoSumRange = (row, column) => {
+    const selection = getSelection()
+    if (!selection) return null
+
+    const rowStart = Math.min(...(selection.row || [row]))
+    const rowEnd = Math.max(...(selection.row || [row]))
+    const colStart = Math.min(...(selection.column || [column]))
+    const colEnd = Math.max(...(selection.column || [column]))
+    const isSingleCell = rowStart === rowEnd && colStart === colEnd
+
+    if (!isSingleCell) {
+      const width = colEnd - colStart
+      const height = rowEnd - rowStart
+      if (height >= width) {
+        return {
+          startRow: rowStart,
+          endRow: rowEnd,
+          startCol: colStart,
+          endCol: colEnd,
+          sumMode: 'vertical'
+        }
+      }
+
+      return {
+        startRow: rowStart,
+        endRow: rowEnd,
+        startCol: colStart,
+        endCol: colEnd,
+        sumMode: 'horizontal'
+      }
+    }
+
+    let top = row - 1
+    while (top >= 0 && isNumericCell(getCellValueAt(top, column))) top -= 1
+    top += 1
+
+    let bottom = row - 1
+    if (top <= row - 1) {
+      bottom = row - 1
+      if (bottom >= top && isNumericCell(getCellValueAt(bottom, column))) {
+        return {
+          startRow: top,
+          endRow: bottom,
+          startCol: column,
+          endCol: column,
+          sumMode: 'vertical'
+        }
+      }
+    }
+
+    let left = column - 1
+    while (left >= 0 && isNumericCell(getCellValueAt(row, left))) left -= 1
+    left += 1
+
+    let right = column - 1
+    if (left <= column - 1) {
+      right = column - 1
+      if (right >= left && isNumericCell(getCellValueAt(row, right))) {
+        return {
+          startRow: row,
+          endRow: row,
+          startCol: left,
+          endCol: right,
+          sumMode: 'horizontal'
+        }
+      }
+    }
+
+    return null
+  }
+
+  const doAutoSum = () => {
+    const workbook = getWorkbook()
+    const cell = getActiveCell()
+
+    if (!workbook || !cell) {
+      showToast('Select an active cell first')
+      return
+    }
+
+    const range = findAutoSumRange(cell.row, cell.column)
+    if (!range) {
+      showToast('No numeric range found to sum')
+      return
+    }
+
+    const startRef = `${columnToLabel(range.startCol)}${range.startRow + 1}`
+    const endRef = `${columnToLabel(range.endCol)}${range.endRow + 1}`
+    const formula = range.sumMode === 'horizontal'
+      ? `=SUM(${startRef}:${endRef})`
+      : `=SUM(${startRef}:${endRef})`
+
+    try {
+      workbook.setCellValue?.(cell.row, cell.column, formula)
+      showToast(`AutoSum inserted into ${columnToLabel(cell.column)}${cell.row + 1}`)
+    } catch (err) {
+      showToast('AutoSum failed: ' + (err?.message || 'unable to write formula'))
+    }
+  }
+
   const parseRefs = formula => {
     const matches = String(formula || '').match(/\b[A-Z]{1,3}\d+(?::[A-Z]{1,3}\d+)?\b/g)
     return matches || []
@@ -612,7 +745,7 @@ const showToast = (msg) => {
       </Group>
 
       <Group label="Editing">
-        <Btn label="AutoSum" icon="∑" onClick={() => showToast('AutoSum coming soon')} />
+        <Btn label="AutoSum" icon="∑" onClick={doAutoSum} />
         <Btn label="Fill" icon="▼" onClick={() => showToast('Fill coming soon')} />
         <Btn label="Clear" icon="◌" onClick={() => showToast('Clear coming soon')} />
         <Btn label="Sort" icon="⇅" onClick={() => showToast('Sort coming soon')} />
@@ -645,7 +778,7 @@ const showToast = (msg) => {
     <>
       <Group label="Function Library">
         <Btn label="Insert Fn" icon="ƒ" onClick={() => openFormulaSearch('')} />
-        <Btn label="AutoSum" icon="∑" onClick={() => openFormulaSearch('SUM')} />
+        <Btn label="AutoSum" icon="∑" onClick={doAutoSum} />
         <Btn label="Financial" icon="$" onClick={() => openFormulaSearch('PMT')} />
         <Btn label="Logical" icon="⊻" onClick={() => openFormulaSearch('IF')} />
         <Btn label="Text" icon="T" onClick={() => openFormulaSearch('CONCATENATE')} />
