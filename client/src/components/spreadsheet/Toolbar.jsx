@@ -6,6 +6,7 @@ import {
   sortSelection,
   handleFreeze
 } from '@fortune-sheet/core'
+import { writeFormulaToActiveCell } from '../../utils/formulaActions'
 
 const TABS = ['Home', 'Insert', 'Formulas', 'Data', 'View']
 
@@ -498,10 +499,8 @@ const showToast = (msg) => {
   }
 
   const doAutoSum = () => {
-    const workbook = getWorkbook()
     const cell = getActiveCell()
-
-    if (!workbook || !cell) {
+    if (!cell) {
       showToast('Select an active cell first')
       return
     }
@@ -514,16 +513,14 @@ const showToast = (msg) => {
 
     const startRef = `${columnToLabel(range.startCol)}${range.startRow + 1}`
     const endRef = `${columnToLabel(range.endCol)}${range.endRow + 1}`
-    const formula = range.sumMode === 'horizontal'
-      ? `=SUM(${startRef}:${endRef})`
-      : `=SUM(${startRef}:${endRef})`
+    const result = writeFormulaToActiveCell(workbookRef, `=SUM(${startRef}:${endRef})`)
 
-    try {
-      workbook.setCellValue?.(cell.row, cell.column, formula)
+    if (result.ok) {
       showToast(`AutoSum inserted into ${columnToLabel(cell.column)}${cell.row + 1}`)
-    } catch (err) {
-      showToast('AutoSum failed: ' + (err?.message || 'unable to write formula'))
+      return
     }
+
+    showToast(`AutoSum failed: ${result.error}`)
   }
 
   const parseRefs = formula => {

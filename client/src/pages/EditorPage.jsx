@@ -6,6 +6,7 @@ import FormulaSearchBar from '../components/formula/FormulaSearchBar';
 import SaveFormulaModal from '../components/formula/SaveFormulaModal';
 import FormulaExplainer from '../components/formula/FormulaExplainer';
 import AIGenerator from '../components/ai/AIGenerator';
+import { writeFormulaToActiveCell } from '../utils/formulaActions';
 
 const EditorPage = () => {
   const workbookRef = useRef(null);
@@ -38,14 +39,15 @@ const EditorPage = () => {
     setAiOpen(true);
   }, []);
   const handleInsertFormula = useCallback((syntax) => {
-    navigator.clipboard.writeText(syntax).then(() => {
-      const toast = document.createElement('div');
-      toast.textContent = 'Formula copied. Paste into the active cell.';
-      toast.style.cssText =
-        'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:50;padding:12px 16px;border-radius:10px;background:white;border:1px solid var(--ivory-3);color:var(--ink);font-size:12px;box-shadow:0 20px 40px rgba(28,26,23,0.08);';
-      document.body.appendChild(toast);
-      setTimeout(() => toast.remove(), 2500);
-    });
+    const result = writeFormulaToActiveCell(workbookRef, syntax);
+    const toast = document.createElement('div');
+    toast.textContent = result.ok
+      ? 'Formula inserted into the active cell.'
+      : result.error || 'Select an active cell first.';
+    toast.style.cssText =
+      'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:50;padding:12px 16px;border-radius:10px;background:white;border:1px solid var(--ivory-3);color:var(--ink);font-size:12px;box-shadow:0 20px 40px rgba(28,26,23,0.08);';
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2500);
   }, []);
   const handleAISave = useCallback((formula) => {
     setCurrentFormula(formula);
