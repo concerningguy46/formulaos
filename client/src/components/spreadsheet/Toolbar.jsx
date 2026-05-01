@@ -1,4 +1,11 @@
 ﻿import { useState } from 'react'
+import { 
+  cancelNormalSelected,
+  insertRowCol,
+  deleteRowCol,
+  sortSelection,
+  handleFreeze
+} from '@fortune-sheet/core'
 
 const TABS = ['Home', 'Insert', 'Formulas', 'Data', 'View']
 
@@ -127,7 +134,7 @@ const Btn = ({ label, icon: iconText, onClick, active }) => (
   </button>
 )
 
-export default function Toolbar({ workbookRef, saveStatus, onSearch, onAI }) {
+export default function Toolbar({ workbookRef, saveStatus, onSearch }) {
   const [activeTab, setActiveTab] = useState('Home')
   const [fontFamily, setFontFamily] = useState('DM Sans')
   const [fontSize, setFontSize] = useState('11')
@@ -136,9 +143,224 @@ export default function Toolbar({ workbookRef, saveStatus, onSearch, onAI }) {
 const [showFormulas, setShowFormulas] = useState(false)
   const [toastMsg, setToastMsg] = useState('')
 
-  const showToast = (msg) => {
+const showToast = (msg) => {
     setToastMsg(msg)
     setTimeout(() => setToastMsg(''), 2500)
+  }
+
+  const getWorkbook = () => workbookRef?.current
+
+  const getSheet = () => {
+    return workbookRef?.current?.getSheet?.() || 
+           window.fortunesheet?.[0]
+  }
+
+  const getSelection = () => getSheet()?.luckysheet_select_save?.[0]
+
+  const getCurrentSheetIndex = () => {
+    const workbook = getWorkbook()
+    const sheet = getSheet()
+    const sheets = workbook?.getAllSheets?.()
+
+    if (!workbook || !sheet || !Array.isArray(sheets)) return -1
+
+    return sheets.findIndex(item => item?.id === sheet?.id || item?.name === sheet?.name)
+  }
+
+  const updateCurrentSheet = updater => {
+    const workbook = getWorkbook()
+    const sheets = workbook?.getAllSheets?.()
+    const currentIndex = getCurrentSheetIndex()
+
+    if (!workbook || !Array.isArray(sheets) || currentIndex < 0) return false
+
+    const nextSheets = sheets.map((sheet, index) => (
+      index === currentIndex ? updater({ ...sheet }) : sheet
+    ))
+
+    workbook.updateSheet?.(nextSheets)
+    return true
+  }
+
+  const applyFormat = (key, value) => {
+    const workbook = getWorkbook()
+    const selection = getSelection()
+
+    if (!selection) {
+      showToast('Select a cell first')
+      return
+    }
+
+    try {
+      if (workbook?.setCellFormatByRange) {
+        workbook.setCellFormatByRange(key, value, selection)
+        return
+      }
+    } catch {
+      // Ignore and surface a user-facing message below.
+    }
+
+    showToast('Select a cell and try again')
+  }
+
+  const insertOrDelete = (type, action) => {
+    const workbook = getWorkbook()
+    const sheet = getSheet()
+    const selection = getSelection()
+    const coreSheet = window.fortunesheet?.[0]
+    const normalizedType = type === 'col' ? 'column' : 'row'
+    const start = normalizedType === 'row'
+      ? selection?.row?.[0] ?? 0
+      : selection?.column?.[0] ?? 0
+    const end = normalizedType === 'row'
+      ? selection?.row?.[1] ?? start
+      : selection?.column?.[1] ?? start
+
+    try {
+      if (coreSheet && typeof cancelNormalSelected === 'function') {
+        cancelNormalSelected(coreSheet)
+      }
+    } catch {
+      // Non-fatal; continue with the actual row/column mutation.
+    }
+
+    if (action === 'insert') {
+      try {
+        if (workbook?.insertRowOrColumn) {
+          workbook.insertRowOrColumn(normalizedType, start, 1, 'rightbottom')
+          return true
+        }
+      } catch {
+        // Fall through to the core API.
+      }
+
+      try {
+        if (coreSheet?.luckysheetfile && sheet?.id) {
+          insertRowCol(coreSheet, {
+            type: normalizedType,
+            index: start,
+            count: 1,
+            direction: 'rightbottom',
+            id: sheet.id
+          })
+          return true
+        }
+      } catch {
+        // Ignore and show a message below.
+      }
+    } else {
+      try {
+        if (workbook?.deleteRowOrColumn) {
+          workbook.deleteRowOrColumn(normalizedType, start, end)
+          return true
+        }
+      } catch {
+        // Fall through to the core API.
+      }
+
+      try {
+        if (coreSheet?.luckysheetfile && sheet?.id) {
+          deleteRowCol(coreSheet, {
+            type: normalizedType,
+            start,
+            end,
+            id: sheet.id
+          })
+          return true
+        }
+      } catch {
+        // Ignore and show a message below.
+      }
+    }
+
+    showToast('Select a row or column first')
+    return false
+  }
+
+  const sortSelectionRange = isAsc => {
+    const workbook = getWorkbook()
+    const selection = getSelection()
+    const coreSheet = window.fortunesheet?.[0]
+
+    if (!selection) {
+      showToast('Select a range first')
+      return
+    }
+
+    try {
+      if (coreSheet?.luckysheetfile && typeof sortSelection === 'function') {
+        sortSelection(coreSheet, isAsc)
+        showToast(isAsc ? 'Sorted A to Z' : 'Sorted Z to A')
+        return
+      }
+    } catch {
+      // Fall through to the workbook-based fallback.
+    }
+
+    try {
+      const cells = workbook?.getCellsByRange?.(selection)
+      if (!Array.isArray(cells) || !cells.length) {
+        showToast('Select a range first')
+        return
+      }
+
+      const sortedRows = [...cells].sort((left, right) => {
+        const leftValue = String(left?.[0]?.m ?? left?.[0]?.v ?? '')
+        const rightValue = String(right?.[0]?.m ?? right?.[0]?.v ?? '')
+        const comparison = leftValue.localeCompare(rightValue, undefined, {
+          numeric: true,
+          sensitivity: 'base'
+        })
+        return isAsc ? comparison : -comparison
+      })
+
+      const values = sortedRows.map(row => row.map(cell => cell?.m ?? cell?.v ?? ''))
+      workbook?.setCellValuesByRange?.(values, selection)
+      showToast(isAsc ? 'Sorted A to Z' : 'Sorted Z to A')
+      return
+    } catch {
+      // Ignore and surface a user-facing message below.
+    }
+
+    showToast('Select a range first')
+  }
+
+  const setZoom = nextZoom => {
+    if (!updateCurrentSheet(sheet => ({
+      ...sheet,
+      zoomRatio: nextZoom
+    }))) {
+      showToast('Open a sheet first')
+    }
+  }
+
+  const freezeSheet = type => {
+    const coreSheet = window.fortunesheet?.[0]
+
+    try {
+      if (coreSheet && typeof handleFreeze === 'function') {
+        if (type === 'unfreeze') handleFreeze(coreSheet, 'freeze-cancel')
+        else if (type === 'row') handleFreeze(coreSheet, 'freeze-row')
+        else handleFreeze(coreSheet, 'freeze-col')
+        return
+      }
+    } catch {
+      // Fall through to the workbook update path below.
+    }
+
+    if (!updateCurrentSheet(sheet => ({
+      ...sheet,
+      frozen: type === 'unfreeze'
+        ? undefined
+        : {
+            type: type === 'row' ? 'row' : 'column',
+            range: type === 'row'
+              ? { row_focus: 0 }
+              : { col_focus: 0 }
+          }
+    }))) {
+      showToast('Open a sheet first')
+    }
   }
 
   const renderHome = () => (
@@ -157,9 +379,12 @@ const [showFormulas, setShowFormulas] = useState(false)
           padding: '6px 4px'
         }}>
           <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-            <select
+              <select
               value={fontFamily}
-              onChange={e => setFontFamily(e.target.value)}
+              onChange={e => {
+                setFontFamily(e.target.value)
+                applyFormat('ff', e.target.value)
+              }}
               style={selectStyle}
             >
               <option>DM Sans</option>
@@ -168,9 +393,12 @@ const [showFormulas, setShowFormulas] = useState(false)
               <option>Courier New</option>
               <option>Georgia</option>
             </select>
-            <select
+<select
               value={fontSize}
-              onChange={e => setFontSize(e.target.value)}
+              onChange={e => {
+                setFontSize(e.target.value)
+                applyFormat('fs', Number(e.target.value))
+              }}
               style={{ ...selectStyle, width: '52px' }}
             >
               {[8,9,10,11,12,14,16,18,20,24,28,36].map(s => (
@@ -179,16 +407,24 @@ const [showFormulas, setShowFormulas] = useState(false)
             </select>
           </div>
           <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
-            <SmallBtn onClick={() => document.execCommand('bold')}>
+<SmallBtn onClick={() => {
+              applyFormat('bl', 1)
+            }}>
               <strong style={{ fontSize: '13px' }}>B</strong>
             </SmallBtn>
-            <SmallBtn onClick={() => document.execCommand('italic')}>
+            <SmallBtn onClick={() => {
+              applyFormat('it', 1)
+            }}>
               <em style={{ fontSize: '13px' }}>I</em>
             </SmallBtn>
-            <SmallBtn onClick={() => document.execCommand('underline')}>
+            <SmallBtn onClick={() => {
+              applyFormat('un', 1)
+            }}>
               <u style={{ fontSize: '13px' }}>U</u>
             </SmallBtn>
-            <SmallBtn onClick={() => document.execCommand('strikeThrough')}>
+            <SmallBtn onClick={() => {
+              applyFormat('cl', 1)
+            }}>
               <s style={{ fontSize: '13px' }}>S</s>
             </SmallBtn>
             <div style={{ width: '1px', height: '16px', background: '#E0DBD0', margin: '0 2px' }} />
@@ -203,9 +439,15 @@ const [showFormulas, setShowFormulas] = useState(false)
       </Group>
 
       <Group label="Alignment">
-        <Btn label="Left" icon="≡" onClick={() => document.execCommand('justifyLeft')} />
-        <Btn label="Center" icon="≣" onClick={() => document.execCommand('justifyCenter')} />
-        <Btn label="Right" icon="⊒" onClick={() => document.execCommand('justifyRight')} />
+<Btn label="Left" icon="≡" onClick={() => {
+          applyFormat('ht', 1)
+        }} />
+        <Btn label="Center" icon="≣" onClick={() => {
+          applyFormat('ht', 0)
+        }} />
+        <Btn label="Right" icon="⊒" onClick={() => {
+          applyFormat('ht', 2)
+        }} />
         <Btn label="Wrap" icon="⇥" onClick={() => showToast('Wrap text toggled')} />
         <Btn label="Merge" icon="⊠" onClick={() => showToast('Merge cells coming soon')} />
       </Group>
@@ -217,7 +459,27 @@ const [showFormulas, setShowFormulas] = useState(false)
           gap: '4px',
           padding: '6px 4px'
         }}>
-          <select style={{ ...selectStyle, width: '120px' }}>
+<select style={{ ...selectStyle, width: '120px' }} onChange={e => {
+            const formats = {
+              'General': 'General',
+              'Number': '0.00',
+              'Currency': '"$"#,##0.00',
+              'Percentage': '0.00%',
+              'Date': 'yyyy/MM/dd',
+              'Time': 'h:mm AM/PM',
+              'Text': '@'
+            }
+            const workbook = getWorkbook()
+            const selection = getSelection()
+            const format = { fa: formats[e.target.value], t: 'n' }
+
+            if (selection && workbook?.setCellFormatByRange) {
+              workbook.setCellFormatByRange('ct', format, selection)
+              return
+            }
+
+            showToast('Select a cell first')
+          }}>
             <option>General</option>
             <option>Number</option>
             <option>Currency</option>
@@ -237,9 +499,13 @@ const [showFormulas, setShowFormulas] = useState(false)
         </div>
       </Group>
 
-      <Group label="Cells">
-        <Btn label="Insert" icon="⊕" onClick={() => showToast('Insert row/col coming soon')} />
-        <Btn label="Delete" icon="⊖" onClick={() => showToast('Delete row/col coming soon')} />
+<Group label="Cells">
+        <Btn label="Insert" icon="⊕" onClick={() => {
+          if (insertOrDelete('row', 'insert')) showToast('Row inserted')
+        }} />
+        <Btn label="Delete" icon="⊖" onClick={() => {
+          if (insertOrDelete('row', 'delete')) showToast('Row deleted')
+        }} />
         <Btn label="Format" icon="⊞" onClick={() => showToast('Format cells coming soon')} />
       </Group>
 
@@ -305,13 +571,83 @@ const [showFormulas, setShowFormulas] = useState(false)
 
   const renderData = () => (
     <>
-      <Group label="Get Data">
-        <Btn label="Import CSV" icon="⇩" onClick={() => showToast('Import CSV coming soon')} />
-        <Btn label="Import XLS" icon="⇩" onClick={() => showToast('Import Excel coming soon')} />
+<Group label="Get Data">
+        <Btn label="Import CSV" icon="⇩" onClick={() => {
+          const input = document.createElement('input')
+          input.type = 'file'
+          input.accept = '.csv'
+          input.onchange = async (e) => {
+            const file = e.target.files[0]
+            if (!file) return
+            const text = await file.text()
+            const rows = text.split('\n').map(r => r.split(','))
+            const celldata = []
+            rows.forEach((row, r) => {
+              row.forEach((val, c) => {
+                const v = val.trim().replace(/^"|"$/g, '')
+                if (v) celldata.push({ 
+                  r, c, v: { v, m: v, ct: { fa: 'General', t: 'g' } } 
+                })
+              })
+            })
+            workbookRef?.current?.loadData?.([{
+              name: file.name.replace('.csv', ''),
+              celldata,
+              row: Math.max(rows.length + 20, 100),
+              column: 26,
+              status: 1
+            }])
+            showToast('Imported ' + file.name)
+          }
+          input.click()
+        }} />
+        <Btn label="Import XLS" icon="⇩" onClick={() => {
+          const input = document.createElement('input')
+          input.type = 'file'
+          input.accept = '.xlsx,.xls'
+          input.onchange = async (e) => {
+            const file = e.target.files[0]
+            if (!file) return
+            try {
+              const XLSX = await import('xlsx')
+              const buffer = await file.arrayBuffer()
+              const wb = XLSX.read(buffer)
+              const wsName = wb.SheetNames[0]
+              const wsData = wb.Sheets[wsName]
+              const rows = XLSX.utils.sheet_to_json(wsData, { header: 1 })
+              const celldata = []
+              rows.forEach((row, r) => {
+                row.forEach((val, c) => {
+                  if (val !== undefined && val !== '') {
+                    const v = String(val)
+                    celldata.push({ 
+                      r, c, v: { v, m: v, ct: { fa: 'General', t: 'g' } } 
+                    })
+                  }
+                })
+              })
+              workbookRef?.current?.loadData?.([{
+                name: wsName,
+                celldata,
+                row: Math.max(rows.length + 20, 100),
+                column: 26,
+                status: 1
+              }])
+              showToast('Imported ' + file.name)
+            } catch (err) {
+              showToast('Import failed: ' + err.message)
+            }
+          }
+          input.click()
+        }} />
       </Group>
-      <Group label="Sort and Filter">
-        <Btn label="A to Z" icon="↑" onClick={() => showToast('Sort A-Z coming soon')} />
-        <Btn label="Z to A" icon="↓" onClick={() => showToast('Sort Z-A coming soon')} />
+<Group label="Sort and Filter">
+        <Btn label="A to Z" icon="↑" onClick={() => {
+          sortSelectionRange(true)
+        }} />
+        <Btn label="Z to A" icon="↓" onClick={() => {
+          sortSelectionRange(false)
+        }} />
         <Btn label="Filter" icon="▽" onClick={() => showToast('Filter coming soon')} />
         <Btn label="Clear" icon="✕" onClick={() => showToast('Clear filter coming soon')} />
       </Group>
@@ -327,11 +663,13 @@ const [showFormulas, setShowFormulas] = useState(false)
     <>
       <Group label="Views">
         <Btn label="Normal" icon="▢" onClick={() => showToast('Normal view')} />
-        <Btn label="Full Screen" icon="⛶" onClick={() => {
+<Btn label="Full Screen" icon="⛶" onClick={() => {
           if (document.fullscreenElement) {
             document.exitFullscreen()
+            showToast('Exited full screen')
           } else {
             document.documentElement.requestFullscreen()
+            showToast('Press Escape to exit full screen')
           }
         }} />
       </Group>
@@ -349,15 +687,33 @@ const [showFormulas, setShowFormulas] = useState(false)
           onClick={() => setShowHeadings(!showHeadings)}
         />
       </Group>
-      <Group label="Freeze">
-        <Btn label="Freeze Top" icon="⊤" onClick={() => showToast('Freeze top row coming soon')} />
-        <Btn label="Freeze Col" icon="⊣" onClick={() => showToast('Freeze first col coming soon')} />
-        <Btn label="Unfreeze" icon="⊠" onClick={() => showToast('Unfreeze coming soon')} />
+<Group label="Freeze">
+        <Btn label="Freeze Top" icon="⊤" onClick={() => {
+          freezeSheet('row')
+          showToast('Top row frozen')
+        }} />
+        <Btn label="Freeze Col" icon="⊣" onClick={() => {
+          freezeSheet('column')
+          showToast('First column frozen')
+        }} />
+        <Btn label="Unfreeze" icon="⊠" onClick={() => {
+          freezeSheet('unfreeze')
+          showToast('Unfrozen')
+        }} />
       </Group>
       <Group label="Zoom">
-        <Btn label="100%" icon="⊡" onClick={() => showToast('Zoom reset coming soon')} />
-        <Btn label="Zoom In" icon="⊕" onClick={() => showToast('Zoom in coming soon')} />
-        <Btn label="Zoom Out" icon="⊖" onClick={() => showToast('Zoom out coming soon')} />
+        <Btn label="100%" icon="⊡" onClick={() => {
+          setZoom(1)
+          showToast('Zoom reset to 100%')
+        }} />
+        <Btn label="Zoom In" icon="⊕" onClick={() => {
+          const sheet = getSheet()
+          setZoom(Math.min((sheet?.zoomRatio || 1) + 0.1, 4))
+        }} />
+        <Btn label="Zoom Out" icon="⊖" onClick={() => {
+          const sheet = getSheet()
+          setZoom(Math.max((sheet?.zoomRatio || 1) - 0.1, 0.1))
+        }} />
       </Group>
     </>
   )
