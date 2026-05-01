@@ -77,7 +77,7 @@ const EditorPage = () => {
           'radial-gradient(circle at top left, rgba(0,212,170,0.08), transparent 28%), linear-gradient(180deg, #f7f4ef 0%, #fbfaf7 60%, #f7f4ef 100%)',
       }}
     >
-<Toolbar workbookRef={workbookRef} onImport={handleImport} onExport={handleExport} />
+<Toolbar workbookRef={workbookRef} saveStatus={undefined} onSearch={handleSearch} onImport={handleImport} onExport={handleExport} />
       <FormulaBar
         onSearch={handleSearch}
         onSave={handleSave}
