@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Workbook } from '@fortune-sheet/react';
 import '@fortune-sheet/react/dist/index.css';
 import useSpreadsheetStore from '../../store/spreadsheetStore';
 
-const SpreadsheetGrid = ({ onCellSelect }) => {
+const SpreadsheetGrid = ({ onCellSelect, workbookRef }) => {
   const containerRef = useRef(null);
+  const internalWorkbookRef = useRef(null);
   const { setSheetData, setSelectedCell, startAutoSave, stopAutoSave } = useSpreadsheetStore();
   const [sheetSettings] = useState([
     {
@@ -48,6 +49,13 @@ const SpreadsheetGrid = ({ onCellSelect }) => {
     [setSelectedCell, onCellSelect]
   );
 
+  // Expose workbook instance via ref
+  useEffect(() => {
+    if (workbookRef && internalWorkbookRef.current) {
+      workbookRef.current = internalWorkbookRef.current;
+    }
+  }, [workbookRef]);
+
   return (
     <div
       ref={containerRef}
@@ -67,6 +75,7 @@ const SpreadsheetGrid = ({ onCellSelect }) => {
         style={{ width: '100%', height: '100%', minHeight: '600px', overflow: 'hidden' }}
       >
         <Workbook
+          ref={internalWorkbookRef}
           data={sheetSettings}
           onChange={handleChange}
           onCellSelect={handleCellSelect}

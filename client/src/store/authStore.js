@@ -6,8 +6,8 @@ import { authService } from '../services/authService';
  * Persists token and user to localStorage.
  */
 const useAuthStore = create((set, get) => ({
-  user: JSON.parse(localStorage.getItem('formulaos_user')) || null,
-  token: localStorage.getItem('formulaos_token') || null,
+  user: JSON.parse(localStorage.getItem('user')) || null,
+  token: localStorage.getItem('token') || null,
   loading: false,
   error: null,
 
@@ -18,8 +18,8 @@ const useAuthStore = create((set, get) => ({
       const result = await authService.register(username, password);
       const { token, ...user } = result;
 
-      localStorage.setItem('formulaos_token', token);
-      localStorage.setItem('formulaos_user', JSON.stringify(user));
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
       set({ user, token, loading: false });
       return { success: true };
     } catch (error) {
@@ -36,8 +36,8 @@ const useAuthStore = create((set, get) => ({
       const result = await authService.login(username, password);
       const { token, ...user } = result;
 
-      localStorage.setItem('formulaos_token', token);
-      localStorage.setItem('formulaos_user', JSON.stringify(user));
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
       set({ user, token, loading: false });
       return { success: true };
     } catch (error) {
@@ -51,7 +51,7 @@ const useAuthStore = create((set, get) => ({
   refreshUser: async () => {
     try {
       const user = await authService.getMe();
-      localStorage.setItem('formulaos_user', JSON.stringify(user));
+      localStorage.setItem('user', JSON.stringify(user));
       set({ user });
     } catch {
       // Silently fail if token is invalid
@@ -60,8 +60,8 @@ const useAuthStore = create((set, get) => ({
 
   /** Logout */
   logout: () => {
-    localStorage.removeItem('formulaos_token');
-    localStorage.removeItem('formulaos_user');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     set({ user: null, token: null, error: null });
   },
 

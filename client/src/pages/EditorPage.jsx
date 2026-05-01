@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useRef } from 'react';
 import SpreadsheetGrid from '../components/spreadsheet/SpreadsheetGrid';
 import FormulaBar from '../components/spreadsheet/FormulaBar';
 import Toolbar from '../components/spreadsheet/Toolbar';
@@ -8,6 +8,7 @@ import FormulaExplainer from '../components/formula/FormulaExplainer';
 import AIGenerator from '../components/ai/AIGenerator';
 
 const EditorPage = () => {
+  const workbookRef = useRef(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [explainerOpen, setExplainerOpen] = useState(false);
@@ -72,7 +73,7 @@ const EditorPage = () => {
           'radial-gradient(circle at top left, rgba(0,212,170,0.08), transparent 28%), linear-gradient(180deg, #f7f4ef 0%, #fbfaf7 60%, #f7f4ef 100%)',
       }}
     >
-      <Toolbar onImport={handleImport} onExport={handleExport} />
+<Toolbar workbookRef={workbookRef} onImport={handleImport} onExport={handleExport} />
       <FormulaBar
         onSearch={handleSearch}
         onSave={handleSave}
@@ -81,7 +82,7 @@ const EditorPage = () => {
       />
 
       <main style={{ maxWidth: '1440px', margin: '0 auto', padding: '18px 16px 24px' }}>
-        <SpreadsheetGrid />
+<SpreadsheetGrid workbookRef={workbookRef} />
       </main>
 
       <FormulaSearchBar
