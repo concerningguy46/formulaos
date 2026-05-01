@@ -1,28 +1,24 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, X, ArrowRight, Sparkles, Store } from 'lucide-react';
 import { searchBuiltInFormulas } from '../../utils/formulaIndex';
 import useFormulaStore from '../../store/formulaStore';
 import Badge from '../ui/Badge';
 
-const FormulaSearchBar = ({ isOpen, onClose, onInsert, onAIGenerate }) => {
-  const [query, setQuery] = useState('');
+const FormulaSearchBar = ({ isOpen, onClose, onInsert, onAIGenerate, initialQuery = '' }) => {
+  const [query, setQuery] = useState(initialQuery);
   const [activeTab, setActiveTab] = useState('builtin');
-  const [builtinResults, setBuiltinResults] = useState([]);
   const inputRef = useRef(null);
   const { formulas: myFormulas } = useFormulaStore();
+
+  const builtinResults = useMemo(() => {
+    return activeTab === 'builtin' ? searchBuiltInFormulas(query) : [];
+  }, [query, activeTab]);
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
       inputRef.current.focus();
-      setBuiltinResults(searchBuiltInFormulas(''));
     }
   }, [isOpen]);
-
-  useEffect(() => {
-    if (activeTab === 'builtin') {
-      setBuiltinResults(searchBuiltInFormulas(query));
-    }
-  }, [query, activeTab]);
 
   const filteredMyFormulas = myFormulas.filter(
     (f) =>

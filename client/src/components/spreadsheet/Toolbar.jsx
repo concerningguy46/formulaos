@@ -363,6 +363,108 @@ const showToast = (msg) => {
     }
   }
 
+  const openFormulaSearch = (query = '') => {
+    if (typeof onSearch === 'function') {
+      onSearch(query)
+    }
+  }
+
+  const getActiveCell = () => {
+    const selection = getSelection()
+    if (!selection) return null
+
+    const row = selection.row_focus ?? selection.row?.[0]
+    const column = selection.column_focus ?? selection.column?.[0]
+
+    if (row == null || column == null) return null
+
+    return { row, column }
+  }
+
+  const getCellFormula = () => {
+    const workbook = getWorkbook()
+    const cell = getActiveCell()
+    if (!workbook || !cell) return ''
+
+    try {
+      return workbook.getCellValue?.(cell.row, cell.column, { type: 'f' }) || ''
+    } catch {
+      return ''
+    }
+  }
+
+  const parseRefs = formula => {
+    const matches = String(formula || '').match(/\b[A-Z]{1,3}\d+(?::[A-Z]{1,3}\d+)?\b/g)
+    return matches || []
+  }
+
+  const inspectPrecedents = () => {
+    const formula = getCellFormula()
+    if (!formula || !String(formula).startsWith('=')) {
+      showToast('Select a formula cell first')
+      return
+    }
+
+    const refs = parseRefs(formula)
+    if (!refs.length) {
+      showToast('No precedents found')
+      return
+    }
+
+    showToast('Precedents: ' + refs.slice(0, 4).join(', '))
+  }
+
+  const inspectDependents = () => {
+    const workbook = getWorkbook()
+    const cell = getActiveCell()
+    if (!workbook || !cell) {
+      showToast('Select a cell first')
+      return
+    }
+
+    const cellRef = `${String.fromCharCode(65 + cell.column)}${cell.row + 1}`
+    const sheets = workbook.getAllSheets?.() || []
+    const dependents = []
+
+    sheets.forEach(sheet => {
+      ;(sheet.celldata || []).forEach(item => {
+        const formula = item?.v?.f || item?.f || ''
+        if (formula && String(formula).includes(cellRef)) {
+          dependents.push(`${sheet.name || 'Sheet'}!${String.fromCharCode(65 + item.c)}${item.r + 1}`)
+        }
+      })
+    })
+
+    if (!dependents.length) {
+      showToast('No dependents found')
+      return
+    }
+
+    showToast('Dependents: ' + dependents.slice(0, 4).join(', '))
+  }
+
+  const runFormulaErrorCheck = () => {
+    const workbook = getWorkbook()
+    const formula = getCellFormula()
+    if (!workbook) {
+      showToast('Open a sheet first')
+      return
+    }
+
+    if (formula && String(formula).startsWith('=')) {
+      const opens = (formula.match(/\(/g) || []).length
+      const closes = (formula.match(/\)/g) || []).length
+      if (opens !== closes) {
+        showToast('Formula has mismatched parentheses')
+        return
+      }
+      showToast('No obvious formula error found')
+      return
+    }
+
+    showToast('Select a formula cell to check')
+  }
+
   const renderHome = () => (
     <>
       <Group label="Clipboard">
@@ -542,25 +644,29 @@ const showToast = (msg) => {
   const renderFormulas = () => (
     <>
       <Group label="Function Library">
-        <Btn label="Insert Fn" icon="ƒ" onClick={onSearch} />
-        <Btn label="AutoSum" icon="∑" onClick={() => showToast('AutoSum coming soon')} />
-        <Btn label="Financial" icon="$" onClick={() => showToast('Financial formulas')} />
-        <Btn label="Logical" icon="⊻" onClick={() => showToast('Logical formulas')} />
-        <Btn label="Text" icon="T" onClick={() => showToast('Text formulas')} />
-        <Btn label="Date" icon="▦" onClick={() => showToast('Date formulas')} />
-        <Btn label="Lookup" icon="⇲" onClick={() => showToast('Lookup formulas')} />
-        <Btn label="Math" icon="π" onClick={() => showToast('Math formulas')} />
+        <Btn label="Insert Fn" icon="ƒ" onClick={() => openFormulaSearch('')} />
+        <Btn label="AutoSum" icon="∑" onClick={() => openFormulaSearch('SUM')} />
+        <Btn label="Financial" icon="$" onClick={() => openFormulaSearch('PMT')} />
+        <Btn label="Logical" icon="⊻" onClick={() => openFormulaSearch('IF')} />
+        <Btn label="Text" icon="T" onClick={() => openFormulaSearch('CONCATENATE')} />
+        <Btn label="Date" icon="▦" onClick={() => openFormulaSearch('TODAY')} />
+        <Btn label="Lookup" icon="⇲" onClick={() => openFormulaSearch('VLOOKUP')} />
+        <Btn label="Math" icon="π" onClick={() => openFormulaSearch('AVERAGE')} />
       </Group>
       <Group label="Auditing">
-        <Btn label="Precedents" icon="↖" onClick={() => showToast('Trace precedents coming soon')} />
-        <Btn label="Dependents" icon="↘" onClick={() => showToast('Trace dependents coming soon')} />
+        <Btn label="Precedents" icon="↖" onClick={inspectPrecedents} />
+        <Btn label="Dependents" icon="↘" onClick={inspectDependents} />
         <Btn
           label="Show Fmlas"
           icon="="
           active={showFormulas}
-          onClick={() => setShowFormulas(!showFormulas)}
+          onClick={() => {
+            const next = !showFormulas
+            setShowFormulas(next)
+            showToast(next ? 'Formula preview on' : 'Formula preview off')
+          }}
         />
-        <Btn label="Error Check" icon="⚠" onClick={() => showToast('Error checking coming soon')} />
+        <Btn label="Error Check" icon="⚠" onClick={runFormulaErrorCheck} />
       </Group>
       <Group label="Calculation">
         <Btn label="Calc Now" icon="↻" onClick={() => showToast('Recalculating...')} />
@@ -608,35 +714,12 @@ const showToast = (msg) => {
           input.onchange = async (e) => {
             const file = e.target.files[0]
             if (!file) return
-            try {
-              const XLSX = await import('xlsx')
-              const buffer = await file.arrayBuffer()
-              const wb = XLSX.read(buffer)
-              const wsName = wb.SheetNames[0]
-              const wsData = wb.Sheets[wsName]
-              const rows = XLSX.utils.sheet_to_json(wsData, { header: 1 })
-              const celldata = []
-              rows.forEach((row, r) => {
-                row.forEach((val, c) => {
-                  if (val !== undefined && val !== '') {
-                    const v = String(val)
-                    celldata.push({ 
-                      r, c, v: { v, m: v, ct: { fa: 'General', t: 'g' } } 
-                    })
-                  }
-                })
-              })
-              workbookRef?.current?.loadData?.([{
-                name: wsName,
-                celldata,
-                row: Math.max(rows.length + 20, 100),
-                column: 26,
-                status: 1
-              }])
-              showToast('Imported ' + file.name)
-            } catch (err) {
-              showToast('Import failed: ' + err.message)
+            const ext = file.name.split('.').pop()?.toLowerCase()
+            if (ext === 'xlsx' || ext === 'xls') {
+              showToast('XLSX import needs the xlsx package installed')
+              return
             }
+            showToast('Unsupported file type')
           }
           input.click()
         }} />

@@ -15,8 +15,12 @@ const EditorPage = () => {
   const [aiOpen, setAiOpen] = useState(false);
   const [currentFormula, setCurrentFormula] = useState('');
   const [aiPrompt, setAiPrompt] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const handleSearch = useCallback(() => setSearchOpen(true), []);
+  const handleSearch = useCallback((query = '') => {
+    setSearchQuery(query);
+    setSearchOpen(true);
+  }, []);
   const handleSave = useCallback((formula) => {
     setCurrentFormula(formula);
     setSaveModalOpen(true);
@@ -86,10 +90,12 @@ const EditorPage = () => {
       </main>
 
       <FormulaSearchBar
+        key={`${searchOpen}-${searchQuery}`}
         isOpen={searchOpen}
         onClose={() => setSearchOpen(false)}
         onInsert={handleInsertFormula}
         onAIGenerate={handleAIFromSearch}
+        initialQuery={searchQuery}
       />
 
       <SaveFormulaModal
