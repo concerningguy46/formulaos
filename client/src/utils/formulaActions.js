@@ -3,6 +3,12 @@ export const getSheetFromWorkbookRef = workbookRef => {
 }
 
 export const getSelectionFromWorkbookRef = workbookRef => {
+  const workbook = workbookRef?.current
+  const selection = workbook?.getSelection?.()
+  if (Array.isArray(selection) && selection.length) {
+    return selection[0]
+  }
+
   return getSheetFromWorkbookRef(workbookRef)?.luckysheet_select_save?.[0] || null
 }
 
@@ -38,13 +44,12 @@ export const writeFormulaToActiveCell = (workbookRef, formula) => {
   const nextFormula = normalized.startsWith('=') ? normalized : `=${normalized}`
 
   try {
-    workbook.setCellValue?.(cell.row, cell.column, nextFormula)
+    workbook.setCellValue?.(cell.row, cell.column, { f: nextFormula })
     return { ok: true, cell, formula: nextFormula }
   } catch (firstError) {
     try {
       workbook.setCellValue?.(cell.row, cell.column, {
         f: nextFormula,
-        v: nextFormula,
         ct: { fa: 'General', t: 'n' }
       })
       return { ok: true, cell, formula: nextFormula }
