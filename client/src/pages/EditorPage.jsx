@@ -1,4 +1,5 @@
-import { useCallback, useState, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import { useBlocker } from 'react-router-dom';
 import SpreadsheetGrid from '../components/spreadsheet/SpreadsheetGrid';
 import FormulaBar from '../components/spreadsheet/FormulaBar';
 import Toolbar from '../components/spreadsheet/Toolbar';
@@ -7,6 +8,12 @@ import SaveFormulaModal from '../components/formula/SaveFormulaModal';
 import FormulaExplainer from '../components/formula/FormulaExplainer';
 import AIGenerator from '../components/ai/AIGenerator';
 import { writeFormulaToActiveCell } from '../utils/formulaActions';
+import {
+  downloadWorkbookDraft,
+  hasWorkbookContent,
+  loadWorkbookDraft,
+  saveWorkbookDraft,
+} from '../utils/workbookPersistence';
 
 const EditorPage = () => {
   const workbookRef = useRef(null);
@@ -17,6 +24,7 @@ const EditorPage = () => {
   const [currentFormula, setCurrentFormula] = useState('');
   const [aiPrompt, setAiPrompt] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [workbookData, setWorkbookData] = useState(() => loadWorkbookDraft());
 
   const handleSearch = useCallback((query = '') => {
     setSearchQuery(query);
@@ -49,6 +57,25 @@ const EditorPage = () => {
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 2500);
   }, []);
+
+  const handleWorkbookChange = useCallback((data) => {
+    setWorkbookData(data);
+    saveWorkbookDraft(data);
+  }, []);
+
+  const shouldBlockLeave = useMemo(() => hasWorkbookContent(workbookData), [workbookData]);
+  const blocker = useBlocker(shouldBlockLeave);
+
+  useEffect(() => {
+    const handleBeforeUnload = (event) => {
+      if (!hasWorkbookContent(workbookData)) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [workbookData]);
   const handleAISave = useCallback((formula) => {
     setCurrentFormula(formula);
     setSaveModalOpen(true);
@@ -71,6 +98,15 @@ const EditorPage = () => {
     console.log('Export triggered');
   };
 
+  const handleDownloadAndLeave = () => {
+    downloadWorkbookDraft(workbookData || []);
+    blocker.proceed?.();
+  };
+
+  const handleStayHere = () => {
+    blocker.reset?.();
+  };
+
   return (
     <div
       style={{
@@ -88,7 +124,11 @@ const EditorPage = () => {
       />
 
       <main style={{ maxWidth: '1440px', margin: '0 auto', padding: '18px 16px 24px' }}>
-<SpreadsheetGrid workbookRef={workbookRef} />
+<SpreadsheetGrid
+  workbookRef={workbookRef}
+  initialData={workbookData || undefined}
+  onWorkbookChange={handleWorkbookChange}
+/>
       </main>
 
       <FormulaSearchBar
@@ -119,6 +159,66 @@ const EditorPage = () => {
         onSave={handleAISave}
         initialPrompt={aiPrompt}
       />
+
+      {blocker.state === 'blocked' && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1000,
+            display: 'grid',
+            placeItems: 'center',
+            background: 'rgba(28,26,23,0.22)',
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          <div
+            style={{
+              width: 'min(92vw, 420px)',
+              borderRadius: '18px',
+              border: '1px solid var(--ivory-3)',
+              background: 'white',
+              padding: '22px',
+              boxShadow: '0 30px 80px rgba(28,26,23,0.18)',
+            }}
+          >
+            <h3 style={{ margin: 0, color: 'var(--ink)', fontSize: '1.2rem' }}>
+              Do you want to download your work?
+            </h3>
+            <p style={{ margin: '10px 0 0', color: 'var(--ink-3)', lineHeight: 1.6, fontSize: '14px' }}>
+              Your spreadsheet is saved in the browser, and you can also download a copy before you leave.
+            </p>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '22px' }}>
+              <button
+                onClick={handleStayHere}
+                style={{
+                  border: '1px solid var(--ivory-3)',
+                  background: 'white',
+                  color: 'var(--ink)',
+                  borderRadius: '10px',
+                  padding: '10px 14px',
+                  cursor: 'pointer',
+                }}
+              >
+                No, stay
+              </button>
+              <button
+                onClick={handleDownloadAndLeave}
+                style={{
+                  border: 'none',
+                  background: 'var(--teal)',
+                  color: 'white',
+                  borderRadius: '10px',
+                  padding: '10px 14px',
+                  cursor: 'pointer',
+                }}
+              >
+                Yes, download and leave
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

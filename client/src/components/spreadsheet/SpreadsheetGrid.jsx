@@ -3,21 +3,23 @@ import { Workbook } from '@fortune-sheet/react';
 import '@fortune-sheet/react/dist/index.css';
 import useSpreadsheetStore from '../../store/spreadsheetStore';
 
-const SpreadsheetGrid = ({ onCellSelect, workbookRef }) => {
+const DEFAULT_SHEET_SETTINGS = [
+  {
+    name: 'Sheet1',
+    color: '',
+    status: 1,
+    order: 0,
+    celldata: [],
+    row: 50,
+    column: 26,
+  },
+];
+
+const SpreadsheetGrid = ({ onCellSelect, workbookRef, initialData, onWorkbookChange }) => {
   const containerRef = useRef(null);
   const internalWorkbookRef = useRef(null);
   const { setSheetData, setSelectedCell, startAutoSave, stopAutoSave } = useSpreadsheetStore();
-  const [sheetSettings] = useState([
-    {
-      name: 'Sheet1',
-      color: '',
-      status: 1,
-      order: 0,
-      celldata: [],
-      row: 50,
-      column: 26,
-    },
-  ]);
+  const [sheetSettings] = useState(() => initialData?.length ? initialData : DEFAULT_SHEET_SETTINGS);
 
   useEffect(() => {
     startAutoSave();
@@ -27,8 +29,11 @@ const SpreadsheetGrid = ({ onCellSelect, workbookRef }) => {
   const handleChange = useCallback(
     (data) => {
       setSheetData(data);
+      if (onWorkbookChange) {
+        onWorkbookChange(data);
+      }
     },
-    [setSheetData]
+    [setSheetData, onWorkbookChange]
   );
 
   const handleCellSelect = useCallback(
