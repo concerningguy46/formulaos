@@ -111,7 +111,7 @@ const HomePage = () => {
               <div style={{ marginTop: '28px', display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
                 <Link to="/editor" style={{ textDecoration: 'none' }}>
                   <Button variant="primary" size="lg" icon={ArrowRight}>
-                    Try the workspace
+                    Open workspace
                   </Button>
                 </Link>
                 <Link to="/marketplace" style={{ textDecoration: 'none' }}>

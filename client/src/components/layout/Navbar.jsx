@@ -20,9 +20,9 @@ const Navbar = () => {
   };
 
   const navLinks = [
-    { to: '/editor', label: 'Editor', icon: Grid3X3 },
-    { to: '/library', label: 'Library', icon: BookOpen },
-    { to: '/marketplace', label: 'Marketplace', icon: Store },
+    { to: '/editor', label: 'Workspace', icon: <Grid3X3 size={16} /> },
+    { to: '/library', label: 'Library', icon: <BookOpen size={16} /> },
+    { to: '/marketplace', label: 'Marketplace', icon: <Store size={16} /> },
   ];
 
   const isActive = (path) => location.pathname === path;
@@ -77,7 +77,7 @@ const Navbar = () => {
 
           {/* Desktop Nav Links */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: '1', justifyContent: 'center' }}>
-            {navLinks.map(({ to, label, icon: Icon }) => (
+            {navLinks.map(({ to, label, icon }) => (
               <Link
                 key={to}
                 to={to}
@@ -95,7 +95,7 @@ const Navbar = () => {
                   background: isActive(to) ? 'rgba(0,212,170,0.08)' : 'transparent',
                 }}
               >
-                <Icon size={16} />
+                {icon}
                 {label}
               </Link>
             ))}
@@ -156,7 +156,7 @@ const Navbar = () => {
         {mobileOpen && (
           <div style={{ paddingBottom: '16px', animation: 'slideInUp 0.3s ease-out' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', paddingTop: '8px' }}>
-              {navLinks.map(({ to, label, icon: Icon }) => (
+              {navLinks.map(({ to, label, icon }) => (
                 <Link
                   key={to}
                   to={to}
@@ -175,7 +175,7 @@ const Navbar = () => {
                     background: isActive(to) ? 'rgba(0,212,170,0.08)' : 'transparent',
                   }}
                 >
-                  <Icon size={16} />
+                  {icon}
                   {label}
                 </Link>
               ))}

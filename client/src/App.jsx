@@ -2,7 +2,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useSearchParams } fro
 import { useEffect } from 'react';
 import Layout from './components/layout/Layout';
 import HomePage from './pages/HomePage';
-import EditorPage from './pages/EditorPage';
+import WorkspacePage from './pages/WorkspacePage';
+import FilePage from './pages/FilePage';
 import LibraryPage from './pages/LibraryPage';
 import MarketplacePage from './pages/MarketplacePage';
 import ListingPage from './pages/ListingPage';
@@ -59,7 +60,9 @@ function App() {
           <Route path="profile/:id" element={<ProfilePage />} />
 
           {/* Editor — open to all (prompt signup to save) */}
-          <Route path="editor" element={<EditorPage />} />
+          <Route path="editor" element={<WorkspacePage />} />
+          <Route path="workspace" element={<WorkspacePage />} />
+          <Route path="file/:fileId" element={<FilePage />} />
 
           {/* Protected routes */}
           <Route

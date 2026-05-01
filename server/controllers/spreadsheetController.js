@@ -1,130 +1,135 @@
-const Spreadsheet = require('../models/Spreadsheet');
+const Sheet = require('../models/Sheet')
 
-const normalizeCellPayload = (cells = {}) => {
-  return Object.entries(cells).reduce((accumulator, [cellId, cell]) => {
-    if (!cellId) {
-      return accumulator;
-    }
+const DEFAULT_WORKBOOK = [
+  {
+    name: 'Sheet1',
+    color: '',
+    status: 1,
+    order: 0,
+    celldata: [],
+    row: 50,
+    column: 26,
+  },
+]
 
-    accumulator[cellId.toUpperCase()] = {
-      rawValue: String(cell?.rawValue ?? ''),
-      computedValue: String(cell?.computedValue ?? ''),
-      dependencies: Array.isArray(cell?.dependencies)
-        ? cell.dependencies.map((dependency) => String(dependency).toUpperCase())
-        : [],
-      dependents: Array.isArray(cell?.dependents)
-        ? cell.dependents.map((dependent) => String(dependent).toUpperCase())
-        : [],
-      error: String(cell?.error ?? ''),
-    };
+const normalizeWorkbookData = data => {
+  if (Array.isArray(data) && data.length) return data
+  return DEFAULT_WORKBOOK
+}
 
-    return accumulator;
-  }, {});
-};
+const serializeSheet = sheet => {
+  if (!sheet) return null
 
-const normalizeSavedFormulas = (savedFormulas = []) => {
-  if (!Array.isArray(savedFormulas)) {
-    return [];
-  }
-
-  return savedFormulas
-    .map((formula) => ({
-      name: String(formula?.name ?? '').trim().toUpperCase(),
-      expression: String(
-        formula?.expression ?? formula?.syntax ?? formula?.template ?? ''
-      ).trim(),
-      description: String(formula?.description ?? '').trim(),
-    }))
-    .filter((formula) => formula.name && formula.expression);
-};
-
-const serializeSpreadsheet = (spreadsheet) => {
-  const plainSpreadsheet = spreadsheet.toObject({ flattenMaps: true });
+  const plain = typeof sheet.toObject === 'function'
+    ? sheet.toObject({ flattenMaps: true })
+    : sheet
 
   return {
-    ...plainSpreadsheet,
-    cells: plainSpreadsheet.cells || {},
-    savedFormulas: plainSpreadsheet.savedFormulas || [],
-  };
-};
+    ...plain,
+    fileId: String(plain._id),
+    fileName: plain.name,
+    data: plain.data || DEFAULT_WORKBOOK,
+  }
+}
 
 exports.deepSaveSpreadsheet = async (req, res, next) => {
   try {
-    const { sheetId, name, cells = {}, savedFormulas = [] } = req.body;
-
+    const { sheetId, name, data } = req.body
     const payload = {
       userId: req.user._id,
-      name: name || 'Untitled Spreadsheet',
-      cells: normalizeCellPayload(cells),
-      savedFormulas: normalizeSavedFormulas(savedFormulas),
+      name: String(name || 'Untitled File').trim() || 'Untitled File',
+      data: normalizeWorkbookData(data),
       lastSavedAt: new Date(),
-    };
+    }
 
-    let spreadsheet;
+    let sheet
 
     if (sheetId) {
-      spreadsheet = await Spreadsheet.findOneAndUpdate(
+      sheet = await Sheet.findOneAndUpdate(
         { _id: sheetId, userId: req.user._id },
         payload,
         {
           new: true,
           runValidators: true,
         }
-      );
+      )
 
-      if (!spreadsheet) {
+      if (!sheet) {
         return res.status(404).json({
           success: false,
-          message: 'Spreadsheet not found',
-        });
+          message: 'File not found',
+        })
       }
     } else {
-      spreadsheet = await Spreadsheet.create(payload);
+      sheet = await Sheet.create(payload)
     }
 
     return res.status(sheetId ? 200 : 201).json({
       success: true,
-      data: serializeSpreadsheet(spreadsheet),
-    });
+      data: serializeSheet(sheet),
+    })
   } catch (error) {
-    return next(error);
+    return next(error)
   }
-};
+}
 
 exports.getSpreadsheet = async (req, res, next) => {
   try {
-    const spreadsheet = await Spreadsheet.findOne({
+    const sheet = await Sheet.findOne({
       _id: req.params.id,
       userId: req.user._id,
-    });
+    })
 
-    if (!spreadsheet) {
+    if (!sheet) {
       return res.status(404).json({
         success: false,
-        message: 'Spreadsheet not found',
-      });
+        message: 'File not found',
+      })
     }
 
     return res.json({
       success: true,
-      data: serializeSpreadsheet(spreadsheet),
-    });
+      data: serializeSheet(sheet),
+    })
   } catch (error) {
-    return next(error);
+    return next(error)
   }
-};
+}
 
 exports.listSpreadsheets = async (req, res, next) => {
   try {
-    const spreadsheets = await Spreadsheet.find({ userId: req.user._id })
+    const sheets = await Sheet.find({ userId: req.user._id })
       .select('name lastSavedAt createdAt updatedAt')
-      .sort({ lastSavedAt: -1 });
+      .sort({ lastSavedAt: -1 })
 
     return res.json({
       success: true,
-      data: spreadsheets,
-    });
+      data: sheets.map(sheet => serializeSheet(sheet)),
+    })
   } catch (error) {
-    return next(error);
+    return next(error)
   }
-};
+}
+
+exports.deleteSpreadsheet = async (req, res, next) => {
+  try {
+    const sheet = await Sheet.findOneAndDelete({
+      _id: req.params.id,
+      userId: req.user._id,
+    })
+
+    if (!sheet) {
+      return res.status(404).json({
+        success: false,
+        message: 'File not found',
+      })
+    }
+
+    return res.json({
+      success: true,
+      message: 'File deleted',
+    })
+  } catch (error) {
+    return next(error)
+  }
+}

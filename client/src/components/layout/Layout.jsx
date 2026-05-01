@@ -7,12 +7,12 @@ import Navbar from './Navbar';
  */
 const Layout = () => {
   const location = useLocation();
-  const isEditor = location.pathname.startsWith('/editor');
+  const isWorkspace = location.pathname.startsWith('/editor') || location.pathname.startsWith('/workspace') || location.pathname.startsWith('/file/');
 
   return (
     <div className="min-h-screen workspace-shell">
-      {!isEditor && <Navbar />}
-      <main className={isEditor ? 'pt-0' : 'pt-16'}>
+      {!isWorkspace && <Navbar />}
+      <main className={isWorkspace ? 'pt-0' : 'pt-16'}>
         <Outlet />
       </main>
     </div>
