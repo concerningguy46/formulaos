@@ -69,9 +69,11 @@ app.use((req, res, next) => {
   if (req.originalUrl === '/api/payments/webhook') {
     next();
   } else {
-    express.json({ limit: '10mb' })(req, res, next);
+    express.json({ limit: '50mb' })(req, res, next);
   }
 });
+
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 app.use(cookieParser());
 

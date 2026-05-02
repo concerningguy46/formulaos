@@ -153,6 +153,7 @@ exports.updateSheet = async (req, res) => {
     if (isFavorite !== undefined) sheet.isFavorite = isFavorite
     sheet.updatedAt = new Date()
 
+    sheet.markModified('data')
     await sheet.save()
 
     res.json({ 

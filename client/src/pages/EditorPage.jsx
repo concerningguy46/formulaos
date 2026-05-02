@@ -22,7 +22,6 @@ const EditorPage = () => {
   const { id } = useParams();
   const workbookRef = useRef(null);
   const saveTimerRef = useRef(null);
-  const sheetsDataRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [fileName, setFileName] = useState('Untitled Sheet');
@@ -76,38 +75,72 @@ const EditorPage = () => {
     setTimeout(() => toast.remove(), 2500);
   }, []);
 
-  const handleChange = (data) => {
-    sheetsDataRef.current = data
+  const handleSheetChange = (updatedData) => {
+    if (!updatedData || !updatedData.length) return
+    
     setSaveStatus('saving')
     clearTimeout(saveTimerRef.current)
-    saveTimerRef.current = setTimeout(() => {
-      saveSheet(data)
-    }, 3000)
-  }
+    
+    saveTimerRef.current = setTimeout(async () => {
+      try {
+        const sheetId = id || window.location.pathname.split('/').pop()
+        if (!sheetId) return
+        
+        const token = localStorage.getItem('token')
+        if (!token) return
 
-  const saveSheet = async (data) => {
-    try {
-      if (!id || !data) return
-      await api.put('/sheets/' + id, {
-        data: data,
-        updatedAt: new Date()
-      })
-      setSaveStatus('saved')
-    } catch (err) {
-      console.error('Save failed:', err)
-      setSaveStatus('error')
-    }
+        const response = await fetch(
+          import.meta.env.VITE_API_URL + '/api/sheets/' + sheetId,
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({ 
+              data: updatedData
+            })
+          }
+        )
+
+        if (response.ok) {
+          setSaveStatus('saved')
+          console.log('Sheet saved successfully')
+        } else {
+          setSaveStatus('error')
+          console.error('Save failed:', await response.text())
+        }
+      } catch (err) {
+        setSaveStatus('error')
+        console.error('Save error:', err)
+      }
+    }, 2000)
   }
 
   // Load sheet data when page opens
   useEffect(() => {
-    const loadSheet = async () => {
+    const loadSheetData = async () => {
       try {
-        if (!id) return
-        const response = await api.get('/sheets/' + id)
-        const sheet = response.data
-        setFileName(sheet.name || 'Untitled Sheet')
-        if (sheet.data && sheet.data.length > 0) {
+        const sheetId = id || window.location.pathname.split('/').pop()
+        if (!sheetId) return
+
+        const token = localStorage.getItem('token')
+        if (!token) return
+
+        const response = await fetch(
+          import.meta.env.VITE_API_URL + '/api/sheets/' + sheetId,
+          {
+            headers: {
+              'Authorization': 'Bearer ' + token
+            }
+          }
+        )
+
+        if (!response.ok) return
+
+        const sheet = await response.json()
+        
+        if (sheet.data && Array.isArray(sheet.data) && sheet.data.length > 0) {
           setSheets(sheet.data)
         } else {
           setSheets([{
@@ -116,29 +149,35 @@ const EditorPage = () => {
             celldata: [],
             row: 100,
             column: 26,
-            status: 1
+            status: 1,
+            order: 0,
+            hide: 0,
+            defaultRowHeight: 25,
+            defaultColWidth: 100,
+            showGridLines: 1
           }])
         }
+        setFileName(sheet.name || 'Untitled Sheet')
       } catch (err) {
-        console.error('Load failed:', err)
+        console.error('Load error:', err)
       }
     }
-    loadSheet()
+
+    loadSheetData()
   }, [id])
 
-  // Save before user leaves the page
+  // Save before user leaves the page if there's a pending save
   useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (sheetsDataRef.current && id) {
-        navigator.sendBeacon(
-          '/api/sheets/' + id,
-          JSON.stringify({ data: sheetsDataRef.current })
-        )
+    const handleBeforeUnload = (e) => {
+      // If there's a pending save timeout, immediately save and prevent page close
+      if (saveTimerRef.current && sheets && sheets.length > 0) {
+        e.preventDefault()
+        e.returnValue = 'You have unsaved changes'
       }
     }
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
-  }, [id])
+  }, [sheets])
 
   const handleAISave = useCallback((formula) => {
     setCurrentFormula(formula);
@@ -236,7 +275,7 @@ const EditorPage = () => {
           key={loadedVersion}
           workbookRef={workbookRef}
           initialData={sheets}
-          onWorkbookChange={handleChange}
+          onWorkbookChange={handleSheetChange}
         />
       </main>
 
