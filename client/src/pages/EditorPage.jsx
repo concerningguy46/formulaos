@@ -16,14 +16,18 @@ import {
 } from '../utils/workbookPersistence';
 import { createEmptyWorkbook } from '../utils/workbookTemplates';
 import { fileService } from '../services/fileService';
+import api from '../services/api';
 
 const EditorPage = () => {
   const { id } = useParams();
   const workbookRef = useRef(null);
+  const saveTimerRef = useRef(null);
+  const sheetsDataRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [fileName, setFileName] = useState('Untitled Sheet');
   const [loadedVersion, setLoadedVersion] = useState(0);
+  const [saveStatus, setSaveStatus] = useState('saved');
   const [searchOpen, setSearchOpen] = useState(false);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [explainerOpen, setExplainerOpen] = useState(false);
@@ -31,7 +35,14 @@ const EditorPage = () => {
   const [currentFormula, setCurrentFormula] = useState('');
   const [aiPrompt, setAiPrompt] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [workbookData, setWorkbookData] = useState(() => loadWorkbookDraft());
+  const [sheets, setSheets] = useState([{
+    name: 'Sheet1',
+    id: 'sheet1',
+    celldata: [],
+    row: 100,
+    column: 26,
+    status: 1
+  }]);
 
   const handleSearch = useCallback((query = '') => {
     setSearchQuery(query);
@@ -65,59 +76,70 @@ const EditorPage = () => {
     setTimeout(() => toast.remove(), 2500);
   }, []);
 
-const handleWorkbookChange = useCallback((data) => {
-    setWorkbookData(data);
-    saveWorkbookDraft(data);
-  }, []);
+  const handleChange = (data) => {
+    sheetsDataRef.current = data
+    setSaveStatus('saving')
+    clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = setTimeout(() => {
+      saveSheet(data)
+    }, 3000)
+  }
 
-  // Load sheet data from backend when ID is provided
+  const saveSheet = async (data) => {
+    try {
+      if (!id || !data) return
+      await api.put('/sheets/' + id, {
+        data: data,
+        updatedAt: new Date()
+      })
+      setSaveStatus('saved')
+    } catch (err) {
+      console.error('Save failed:', err)
+      setSaveStatus('error')
+    }
+  }
+
+  // Load sheet data when page opens
   useEffect(() => {
-    const controller = new AbortController();
-    let isCurrent = true;
-
     const loadSheet = async () => {
-      if (!id) return;
-
-      setLoading(true);
-      setLoadError('');
       try {
-        const file = await fileService.getFile(id, controller.signal);
-        if (!isCurrent) return;
-
-        setFileName(file.fileName || 'Untitled Sheet');
-        setWorkbookData(Array.isArray(file.data) && file.data.length ? file.data : createEmptyWorkbook());
-        setLoadedVersion((v) => v + 1);
+        if (!id) return
+        const response = await api.get('/sheets/' + id)
+        const sheet = response.data
+        setFileName(sheet.name || 'Untitled Sheet')
+        if (sheet.data && sheet.data.length > 0) {
+          setSheets(sheet.data)
+        } else {
+          setSheets([{
+            name: sheet.name || 'Sheet1',
+            id: 'sheet1',
+            celldata: [],
+            row: 100,
+            column: 26,
+            status: 1
+          }])
+        }
       } catch (err) {
-        if (!isCurrent) return;
-        const isAbortError = err.name === 'CanceledError' || err.name === 'AbortError' || err.code === 'ERR_CANCELED';
-        if (!isAbortError) {
-          setLoadError(err.response?.data?.message || 'Could not load sheet');
-        }
-      } finally {
-        if (isCurrent) {
-          setLoading(false);
-        }
+        console.error('Load failed:', err)
       }
-    };
+    }
+    loadSheet()
+  }, [id])
 
-    loadSheet();
-
-    return () => {
-      isCurrent = false;
-      controller.abort();
-    };
-  }, [id]);
-
+  // Save before user leaves the page
   useEffect(() => {
-    const handleBeforeUnload = (event) => {
-      if (!hasWorkbookContent(workbookData)) return;
-      event.preventDefault();
-      event.returnValue = '';
-    };
+    const handleBeforeUnload = () => {
+      if (sheetsDataRef.current && id) {
+        navigator.sendBeacon(
+          '/api/sheets/' + id,
+          JSON.stringify({ data: sheetsDataRef.current })
+        )
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [id])
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [workbookData]);
   const handleAISave = useCallback((formula) => {
     setCurrentFormula(formula);
     setSaveModalOpen(true);
@@ -141,7 +163,7 @@ const handleWorkbookChange = useCallback((data) => {
   };
 
   const handleDownloadAndLeave = () => {
-    downloadWorkbookDraft(workbookData || []);
+    downloadWorkbookDraft(sheets);
   };
 
   const handleStayHere = () => {
@@ -181,7 +203,13 @@ const handleWorkbookChange = useCallback((data) => {
         )}
       </div>
 
-      <Toolbar workbookRef={workbookRef} saveStatus={undefined} onSearch={handleSearch} onImport={handleImport} onExport={handleExport} />
+      <Toolbar 
+        workbookRef={workbookRef}
+        saveStatus={saveStatus}
+        onSearch={handleSearch}
+        onImport={handleImport}
+        onExport={handleExport}
+      />
       <FormulaBar
         onSearch={handleSearch}
         onSave={handleSave}
@@ -207,8 +235,8 @@ const handleWorkbookChange = useCallback((data) => {
         <SpreadsheetGrid
           key={loadedVersion}
           workbookRef={workbookRef}
-          initialData={workbookData || undefined}
-          onWorkbookChange={handleWorkbookChange}
+          initialData={sheets}
+          onWorkbookChange={handleChange}
         />
       </main>
 
