@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
-import { useBlocker } from 'react-router-dom';
+import { useBlocker, useParams } from 'react-router-dom';
 import SpreadsheetGrid from '../components/spreadsheet/SpreadsheetGrid';
 import FormulaBar from '../components/spreadsheet/FormulaBar';
 import Toolbar from '../components/spreadsheet/Toolbar';
@@ -14,9 +14,16 @@ import {
   loadWorkbookDraft,
   saveWorkbookDraft,
 } from '../utils/workbookPersistence';
+import { createEmptyWorkbook } from '../utils/workbookTemplates';
+import { fileService } from '../services/fileService';
 
 const EditorPage = () => {
+  const { id } = useParams();
   const workbookRef = useRef(null);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [fileName, setFileName] = useState('Untitled Sheet');
+  const [loadedVersion, setLoadedVersion] = useState(0);
   const [searchOpen, setSearchOpen] = useState(false);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [explainerOpen, setExplainerOpen] = useState(false);
@@ -58,13 +65,35 @@ const EditorPage = () => {
     setTimeout(() => toast.remove(), 2500);
   }, []);
 
-  const handleWorkbookChange = useCallback((data) => {
+const handleWorkbookChange = useCallback((data) => {
     setWorkbookData(data);
     saveWorkbookDraft(data);
   }, []);
 
   const shouldBlockLeave = useMemo(() => hasWorkbookContent(workbookData), [workbookData]);
   const blocker = useBlocker(shouldBlockLeave);
+
+  // Load sheet data from backend when ID is provided
+  useEffect(() => {
+    const loadSheet = async () => {
+      if (!id) return;
+      
+      setLoading(true);
+      setLoadError('');
+      try {
+        const file = await fileService.getFile(id);
+        setFileName(file.fileName || 'Untitled Sheet');
+        setWorkbookData(Array.isArray(file.data) && file.data.length ? file.data : createEmptyWorkbook());
+        setLoadedVersion(v => v + 1);
+      } catch (err) {
+        setLoadError(err.response?.data?.message || 'Could not load sheet');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSheet();
+  }, [id]);
 
   useEffect(() => {
     const handleBeforeUnload = (event) => {

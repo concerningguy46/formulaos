@@ -4,6 +4,7 @@ import Layout from './components/layout/Layout';
 import HomePage from './pages/HomePage';
 import WorkspacePage from './pages/WorkspacePage';
 import FilePage from './pages/FilePage';
+import EditorPage from './pages/EditorPage';
 import LibraryPage from './pages/LibraryPage';
 import MarketplacePage from './pages/MarketplacePage';
 import ListingPage from './pages/ListingPage';
@@ -59,9 +60,10 @@ function App() {
           <Route path="marketplace/:id" element={<ListingPage />} />
           <Route path="profile/:id" element={<ProfilePage />} />
 
-          {/* Editor — open to all (prompt signup to save) */}
+{/* Editor — open to all (prompt signup to save) */}
           <Route path="editor" element={<WorkspacePage />} />
           <Route path="workspace" element={<WorkspacePage />} />
+          <Route path="editor/:id" element={<ProtectedRoute><EditorPage /></ProtectedRoute>} />
           <Route path="file/:fileId" element={<FilePage />} />
 
           {/* Protected routes */}
