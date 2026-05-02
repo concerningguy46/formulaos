@@ -29,6 +29,7 @@ const sheetSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    strict: false
   }
 );
 

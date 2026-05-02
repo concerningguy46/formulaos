@@ -32,13 +32,32 @@ const app = express();
 // Security headers
 app.use(helmet());
 
-// CORS — allow frontend origin
-app.use(
-  cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
-    credentials: true,
-  })
-);
+// CORS — allow frontend origins
+app.use(cors({
+  origin: function(origin, callback) {
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'http://localhost:5175',
+      'http://localhost:3000',
+      'http://localhost:4173',
+      'https://formulaos.vercel.app',
+      process.env.FRONTEND_URL
+    ].filter(Boolean)
+
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true)
+    } else {
+      callback(new Error('Not allowed by CORS'))
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}))
+
+// Handle preflight requests
+app.options('*', cors())
 
 // Request logging (dev only)
 if (process.env.NODE_ENV === 'development') {

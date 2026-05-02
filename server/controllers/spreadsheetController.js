@@ -133,3 +133,36 @@ exports.deleteSpreadsheet = async (req, res, next) => {
     return next(error)
   }
 }
+
+exports.updateSheet = async (req, res) => {
+  try {
+    const { id } = req.params
+    const { name, data, isFavorite } = req.body
+
+    const sheet = await Sheet.findOne({ 
+      _id: id, 
+      userId: req.user._id 
+    })
+
+    if (!sheet) {
+      return res.status(404).json({ message: 'Sheet not found' })
+    }
+
+    if (name !== undefined) sheet.name = name
+    if (data !== undefined) sheet.data = data
+    if (isFavorite !== undefined) sheet.isFavorite = isFavorite
+    sheet.updatedAt = new Date()
+
+    await sheet.save()
+
+    res.json({ 
+      message: 'Saved',
+      _id: sheet._id,
+      name: sheet.name,
+      updatedAt: sheet.updatedAt
+    })
+  } catch (error) {
+    console.error('Update sheet error:', error)
+    res.status(500).json({ message: 'Save failed', error: error.message })
+  }
+}
