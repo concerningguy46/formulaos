@@ -14,8 +14,8 @@ export const fileService = {
     return Array.isArray(data?.data) ? data.data.map(normalizeFile) : []
   },
 
-  getFile: async (fileId) => {
-    const { data } = await api.get(`/sheets/${fileId}`)
+  getFile: async (fileId, signal) => {
+    const { data } = await api.get(`/sheets/${fileId}`, { signal })
     return normalizeFile(data?.data)
   },
 

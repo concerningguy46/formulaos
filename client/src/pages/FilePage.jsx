@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useBlocker, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Save, Search } from 'lucide-react'
 import SpreadsheetGrid from '../components/spreadsheet/SpreadsheetGrid'
 import Toolbar from '../components/spreadsheet/Toolbar'
@@ -18,6 +18,8 @@ const FilePage = () => {
   const navigate = useNavigate()
   const workbookRef = useRef(null)
   const saveTimerRef = useRef(null)
+  const latestWorkbookDataRef = useRef(createEmptyWorkbook())
+  const latestFileNameRef = useRef('Untitled File')
 
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -74,6 +76,7 @@ const FilePage = () => {
 
   const handleWorkbookChange = useCallback((data) => {
     setWorkbookData(data)
+    latestWorkbookDataRef.current = data
     setIsDirty(true)
     setSaveStatus('saving')
     if (saveTimerRef.current) {
@@ -81,7 +84,7 @@ const FilePage = () => {
     }
     saveTimerRef.current = setTimeout(async () => {
       try {
-        await fileService.saveFile(fileId, { name: fileName, data })
+        await fileService.saveFile(fileId, { name: latestFileNameRef.current, data })
         setSaveStatus('saved')
         setIsDirty(false)
         setSaveError('')
@@ -98,8 +101,12 @@ const FilePage = () => {
       setLoadError('')
       try {
         const file = await fileService.getFile(fileId)
-        setFileName(file.fileName || 'Untitled File')
-        setWorkbookData(Array.isArray(file.data) && file.data.length ? file.data : createEmptyWorkbook())
+        const nextName = file.fileName || 'Untitled File'
+        const nextData = Array.isArray(file.data) && file.data.length ? file.data : createEmptyWorkbook()
+        setFileName(nextName)
+        latestFileNameRef.current = nextName
+        setWorkbookData(nextData)
+        latestWorkbookDataRef.current = nextData
         setIsDirty(false)
         setLoadedVersion(v => v + 1)
       } catch (err) {
@@ -112,11 +119,20 @@ const FilePage = () => {
     if (fileId) loadFile()
 
     return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current)
+        const pendingData = latestWorkbookDataRef.current
+        const pendingName = latestFileNameRef.current
+        ;(async () => {
+          try {
+            await fileService.saveFile(fileId, { name: pendingName, data: pendingData })
+          } catch {
+            // ignore cleanup save failures
+          }
+        })()
+      }
     }
   }, [fileId])
-
-  const blocker = useBlocker(isDirty)
 
   useEffect(() => {
     const handleBeforeUnload = (event) => {
@@ -129,15 +145,6 @@ const FilePage = () => {
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [isDirty])
-
-  const handleDownloadAndLeave = () => {
-    downloadWorkbookDraft(workbookData || [])
-    blocker.proceed?.()
-  }
-
-  const handleStayHere = () => {
-    blocker.reset?.()
-  }
 
   const handleImport = () => {}
   const handleExport = () => {}
@@ -178,6 +185,7 @@ const FilePage = () => {
             onChange={(e) => {
               const nextName = e.target.value
               setFileName(nextName)
+              latestFileNameRef.current = nextName
               setIsDirty(true)
               setSaveStatus('saving')
               if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
@@ -249,27 +257,6 @@ const FilePage = () => {
         onSave={() => {}}
         initialPrompt={aiPrompt}
       />
-
-      {blocker.state === 'blocked' && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'grid', placeItems: 'center', background: 'rgba(28,26,23,0.22)', backdropFilter: 'blur(4px)' }}>
-          <div style={{ width: 'min(92vw, 420px)', borderRadius: '18px', border: '1px solid var(--ivory-3)', background: 'white', padding: '22px', boxShadow: '0 30px 80px rgba(28,26,23,0.18)' }}>
-            <h3 style={{ margin: 0, color: 'var(--ink)', fontSize: '1.2rem' }}>
-              Download a copy before you leave?
-            </h3>
-            <p style={{ margin: '10px 0 0', color: 'var(--ink-3)', lineHeight: 1.6, fontSize: '14px' }}>
-              Your file is autosaved to your private workspace. You can also export a copy to your computer.
-            </p>
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '22px' }}>
-              <button onClick={handleStayHere} style={{ border: '1px solid var(--ivory-3)', background: 'white', color: 'var(--ink)', borderRadius: '10px', padding: '10px 14px', cursor: 'pointer' }}>
-                No, stay
-              </button>
-              <button onClick={handleDownloadAndLeave} style={{ border: 'none', background: 'var(--teal)', color: 'white', borderRadius: '10px', padding: '10px 14px', cursor: 'pointer' }}>
-                Yes, download and leave
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

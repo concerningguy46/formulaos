@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
-import { useBlocker, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import SpreadsheetGrid from '../components/spreadsheet/SpreadsheetGrid';
 import FormulaBar from '../components/spreadsheet/FormulaBar';
 import Toolbar from '../components/spreadsheet/Toolbar';
@@ -70,29 +70,42 @@ const handleWorkbookChange = useCallback((data) => {
     saveWorkbookDraft(data);
   }, []);
 
-  const shouldBlockLeave = useMemo(() => hasWorkbookContent(workbookData), [workbookData]);
-  const blocker = useBlocker(shouldBlockLeave);
-
   // Load sheet data from backend when ID is provided
   useEffect(() => {
+    const controller = new AbortController();
+    let isCurrent = true;
+
     const loadSheet = async () => {
       if (!id) return;
-      
+
       setLoading(true);
       setLoadError('');
       try {
-        const file = await fileService.getFile(id);
+        const file = await fileService.getFile(id, controller.signal);
+        if (!isCurrent) return;
+
         setFileName(file.fileName || 'Untitled Sheet');
         setWorkbookData(Array.isArray(file.data) && file.data.length ? file.data : createEmptyWorkbook());
-        setLoadedVersion(v => v + 1);
+        setLoadedVersion((v) => v + 1);
       } catch (err) {
-        setLoadError(err.response?.data?.message || 'Could not load sheet');
+        if (!isCurrent) return;
+        const isAbortError = err.name === 'CanceledError' || err.name === 'AbortError' || err.code === 'ERR_CANCELED';
+        if (!isAbortError) {
+          setLoadError(err.response?.data?.message || 'Could not load sheet');
+        }
       } finally {
-        setLoading(false);
+        if (isCurrent) {
+          setLoading(false);
+        }
       }
     };
 
     loadSheet();
+
+    return () => {
+      isCurrent = false;
+      controller.abort();
+    };
   }, [id]);
 
   useEffect(() => {
@@ -129,11 +142,10 @@ const handleWorkbookChange = useCallback((data) => {
 
   const handleDownloadAndLeave = () => {
     downloadWorkbookDraft(workbookData || []);
-    blocker.proceed?.();
   };
 
   const handleStayHere = () => {
-    blocker.reset?.();
+    // no-op when navigation blocking is unavailable
   };
 
   return (
@@ -144,7 +156,32 @@ const handleWorkbookChange = useCallback((data) => {
           'radial-gradient(circle at top left, rgba(0,212,170,0.08), transparent 28%), linear-gradient(180deg, #f7f4ef 0%, #fbfaf7 60%, #f7f4ef 100%)',
       }}
     >
-<Toolbar workbookRef={workbookRef} saveStatus={undefined} onSearch={handleSearch} onImport={handleImport} onExport={handleExport} />
+      <div
+        style={{
+          padding: '18px 16px 0',
+          maxWidth: '1440px',
+          margin: '0 auto',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+        }}
+      >
+        <div>
+          <h1 style={{ margin: 0, fontSize: '1.3rem', color: 'var(--ink)' }}>{fileName}</h1>
+          {loadedVersion > 0 && (
+            <p style={{ margin: '6px 0 0', color: 'var(--ink-4)', fontSize: '13px' }}>
+              Loaded version {loadedVersion}
+            </p>
+          )}
+        </div>
+        {loading && (
+          <div style={{ color: 'var(--teal)', fontWeight: 600 }}>Loading sheet…</div>
+        )}
+      </div>
+
+      <Toolbar workbookRef={workbookRef} saveStatus={undefined} onSearch={handleSearch} onImport={handleImport} onExport={handleExport} />
       <FormulaBar
         onSearch={handleSearch}
         onSave={handleSave}
@@ -153,11 +190,26 @@ const handleWorkbookChange = useCallback((data) => {
       />
 
       <main style={{ maxWidth: '1440px', margin: '0 auto', padding: '18px 16px 24px' }}>
-<SpreadsheetGrid
-  workbookRef={workbookRef}
-  initialData={workbookData || undefined}
-  onWorkbookChange={handleWorkbookChange}
-/>
+        {loadError ? (
+          <div
+            style={{
+              marginBottom: '18px',
+              padding: '14px 16px',
+              borderRadius: '12px',
+              background: 'rgba(255,146,146,0.14)',
+              color: '#7A1F1F',
+              border: '1px solid rgba(255,146,146,0.28)',
+            }}
+          >
+            {loadError}
+          </div>
+        ) : null}
+        <SpreadsheetGrid
+          key={loadedVersion}
+          workbookRef={workbookRef}
+          initialData={workbookData || undefined}
+          onWorkbookChange={handleWorkbookChange}
+        />
       </main>
 
       <FormulaSearchBar
@@ -188,66 +240,6 @@ const handleWorkbookChange = useCallback((data) => {
         onSave={handleAISave}
         initialPrompt={aiPrompt}
       />
-
-      {blocker.state === 'blocked' && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 1000,
-            display: 'grid',
-            placeItems: 'center',
-            background: 'rgba(28,26,23,0.22)',
-            backdropFilter: 'blur(4px)',
-          }}
-        >
-          <div
-            style={{
-              width: 'min(92vw, 420px)',
-              borderRadius: '18px',
-              border: '1px solid var(--ivory-3)',
-              background: 'white',
-              padding: '22px',
-              boxShadow: '0 30px 80px rgba(28,26,23,0.18)',
-            }}
-          >
-            <h3 style={{ margin: 0, color: 'var(--ink)', fontSize: '1.2rem' }}>
-              Do you want to download your work?
-            </h3>
-            <p style={{ margin: '10px 0 0', color: 'var(--ink-3)', lineHeight: 1.6, fontSize: '14px' }}>
-              Your spreadsheet is saved in the browser, and you can also download a copy before you leave.
-            </p>
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '22px' }}>
-              <button
-                onClick={handleStayHere}
-                style={{
-                  border: '1px solid var(--ivory-3)',
-                  background: 'white',
-                  color: 'var(--ink)',
-                  borderRadius: '10px',
-                  padding: '10px 14px',
-                  cursor: 'pointer',
-                }}
-              >
-                No, stay
-              </button>
-              <button
-                onClick={handleDownloadAndLeave}
-                style={{
-                  border: 'none',
-                  background: 'var(--teal)',
-                  color: 'white',
-                  borderRadius: '10px',
-                  padding: '10px 14px',
-                  cursor: 'pointer',
-                }}
-              >
-                Yes, download and leave
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
