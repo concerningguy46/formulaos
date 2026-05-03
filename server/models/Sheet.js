@@ -20,7 +20,7 @@ const sheetSchema = new mongoose.Schema(
     },
     data: {
       type: mongoose.Schema.Types.Mixed,
-      default: [{}],
+      default: [],
     },
     lastSavedAt: {
       type: Date,

@@ -13,7 +13,13 @@ const DEFAULT_WORKBOOK = [
 ]
 
 const normalizeWorkbookData = data => {
-  if (Array.isArray(data) && data.length) return data
+  if (Array.isArray(data) && data.length > 0) {
+    // Check if at least one sheet has valid structure
+    const hasValidSheet = data.some(sheet => 
+      sheet && typeof sheet === 'object' && (sheet.name !== undefined || sheet.celldata || sheet.data)
+    )
+    if (hasValidSheet) return data
+  }
   return DEFAULT_WORKBOOK
 }
 
@@ -28,7 +34,7 @@ const serializeSheet = sheet => {
     ...plain,
     fileId: String(plain._id),
     fileName: plain.name,
-    data: plain.data || normalizeWorkbookData(plain.data),
+    data: normalizeWorkbookData(plain.data),
   }
 }
 

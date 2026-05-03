@@ -117,7 +117,7 @@ const FilePage = () => {
       try {
         const file = await fileService.getFile(fileId)
         const nextName = file.fileName || 'Untitled File'
-        const nextData = Array.isArray(file.data) && file.data.length ? file.data : createEmptyWorkbook()
+        const nextData = file.data || createEmptyWorkbook()
         setFileName(nextName)
         latestFileNameRef.current = nextName
         setWorkbookData(nextData)
