@@ -156,7 +156,10 @@ const EditorPage = () => {
           return
         }
 
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+        let apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+        if (!apiUrl.endsWith('/api')) {
+          apiUrl += '/api'
+        }
         const url = apiUrl + '/sheets/' + sheetId
         console.log('🌐 Fetching from:', url)
         
@@ -172,6 +175,7 @@ const EditorPage = () => {
         console.log('📥 Load response status:', response.status)
         if (!response.ok) {
           console.error('❌ Load failed with status:', response.status)
+          setLoadError(`Failed to load sheet: ${response.status} ${response.statusText || ''}`)
           return
         }
 

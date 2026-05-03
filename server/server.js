@@ -135,7 +135,7 @@ const START_PORT = process.env.PORT ? Number(process.env.PORT) : 5000;
 const MAX_PORT = process.env.NODE_ENV === 'production' ? START_PORT : START_PORT + 10;
 
 const tryBindPort = (port) => new Promise((resolve) => {
-  const server = express()
+  const server = net.createServer()
   server.listen(port, '0.0.0.0')
     .once('listening', () => {
       server.close(() => resolve(true))
@@ -156,7 +156,7 @@ const findAvailablePort = async (start, max) => {
       return port
     }
   }
-  return start
+  throw new Error(`No available ports in range ${start}-${max}`)
 }
 
 const startServer = async () => {

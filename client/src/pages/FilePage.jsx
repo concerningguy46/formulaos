@@ -21,6 +21,7 @@ const FilePage = () => {
   const latestWorkbookDataRef = useRef(createEmptyWorkbook())
   const latestFileNameRef = useRef('Untitled File')
   const latestDataRef = useRef(null)
+  const isDirtyRef = useRef(false)
 
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -80,11 +81,13 @@ const FilePage = () => {
     setWorkbookData(data)
     setIsDirty(true)
     setSaveStatus('saving')
+    isDirtyRef.current = true
   }, [])
 
   useEffect(() => {
     const interval = setInterval(async () => {
-      if (latestDataRef.current && fileId) {
+      if (latestDataRef.current && fileId && isDirtyRef.current) {
+        isDirtyRef.current = false
         console.log('AUTOSAVE FIRING — data:', latestDataRef.current)
         try {
           await fileService.saveFile(fileId, {
@@ -101,9 +104,9 @@ const FilePage = () => {
           setSaveError(e.message)
         }
       } else {
-        console.log('AUTOSAVE SKIPPED — latestDataRef:', !!latestDataRef.current, 'fileId:', fileId)
+        console.log('AUTOSAVE SKIPPED — latestDataRef:', !!latestDataRef.current, 'fileId:', fileId, 'isDirty:', isDirtyRef.current)
       }
-    }, 3000)
+    }, 10000)
     return () => clearInterval(interval)
   }, [fileId])
 
@@ -185,7 +188,7 @@ const FilePage = () => {
         setLoadedVersion(prev => prev + 1)
         setIsDirty(true)
         setSaveStatus('saving')
-        await fileService.saveFile(fileId, { name: fileName, data })
+        await fileService.saveFile(fileId, { name: latestFileNameRef.current, data })
         setSaveStatus('saved')
         setIsDirty(false)
         setSaveError('')

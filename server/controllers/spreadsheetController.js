@@ -28,7 +28,7 @@ const serializeSheet = sheet => {
     ...plain,
     fileId: String(plain._id),
     fileName: plain.name,
-data: plain.data,
+    data: plain.data || normalizeWorkbookData(plain.data),
   }
 }
 
@@ -55,7 +55,8 @@ exports.deepSaveSpreadsheet = async (req, res, next) => {
       sheet.name = String(name || 'Untitled File').trim() || 'Untitled File'
       sheet.data = JSON.parse(JSON.stringify(normalizedData))
       sheet.lastSavedAt = new Date()
-      sheet.markModified('data')\n      await sheet.save()\n      console.log('DEBUG SAVE: original length:', normalizedData.length, 'post-save sheet.data:', !!sheet.data?.length, 'sheet._id:', sheet._id)
+      sheet.markModified('data')
+      await sheet.save()
     } else {
       sheet = await Sheet.create({
         userId: req.user._id,
@@ -143,12 +144,12 @@ exports.updateSheet = async (req, res) => {
     })
     if (!sheet) return res.status(404).json({ message: 'Not found' })
     if (req.body.name !== undefined) sheet.name = req.body.name
-    if (req.body.data !== undefined) sheet.data = JSON.parse(JSON.stringify(req.body.data))
+    if (req.body.data !== undefined) sheet.data = JSON.parse(JSON.stringify(normalizeWorkbookData(req.body.data)))
     if (req.body.isFavorite !== undefined) sheet.isFavorite = req.body.isFavorite
     sheet.markModified('data')
     await sheet.save()
     res.json({ message: 'Saved', _id: sheet._id })
   } catch (error) {
-    res.status(500).json({ message: error.message })
+    next(error)
   }
 }

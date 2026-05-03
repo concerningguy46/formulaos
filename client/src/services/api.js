@@ -29,17 +29,8 @@ api.interceptors.response.use(
     const isLocalRetry = isLocalhost && !import.meta.env.VITE_API_URL && config && !error.response
 
     if (isLocalRetry) {
-      const currentBase = config.baseURL || defaultBaseUrl
-      let currentPort = LOCAL_HOST_PORTS[0]
-      try {
-        currentPort = Number(new URL(currentBase).port) || LOCAL_HOST_PORTS[0]
-      } catch {
-        currentPort = LOCAL_HOST_PORTS[0]
-      }
-
-      const currentIndex = LOCAL_HOST_PORTS.indexOf(currentPort)
       config.__retryCount = (config.__retryCount || 0) + 1
-      const nextPortIndex = currentIndex + config.__retryCount
+      const nextPortIndex = config.__retryCount
       
       if (nextPortIndex < LOCAL_HOST_PORTS.length) {
         const nextPort = LOCAL_HOST_PORTS[nextPortIndex]

@@ -19,7 +19,7 @@ const SpreadsheetGrid = ({ onCellSelect, workbookRef, initialData, onWorkbookCha
   const containerRef = useRef(null);
   const internalWorkbookRef = useRef(null);
   const { setSheetData, setSelectedCell, startAutoSave, stopAutoSave } = useSpreadsheetStore();
-  const [sheetSettings] = useState(() => initialData?.length ? initialData : DEFAULT_SHEET_SETTINGS);
+  const sheetSettings = initialData?.length ? initialData : DEFAULT_SHEET_SETTINGS
 
   useEffect(() => {
     startAutoSave();
@@ -28,9 +28,10 @@ const SpreadsheetGrid = ({ onCellSelect, workbookRef, initialData, onWorkbookCha
 
   const handleChange = useCallback(
     (data) => {
-      setSheetData(data);
+      if (!data || !Array.isArray(data)) return
+      setSheetData(data)
       if (onWorkbookChange) {
-        onWorkbookChange(data);
+        onWorkbookChange(data)
       }
     },
     [setSheetData, onWorkbookChange]
@@ -80,6 +81,7 @@ const SpreadsheetGrid = ({ onCellSelect, workbookRef, initialData, onWorkbookCha
         style={{ width: '100%', height: '100%', minHeight: '600px', overflow: 'hidden' }}
       >
         <Workbook
+          key={initialData?.length ? 'loaded' : 'default'}
           ref={internalWorkbookRef}
           data={sheetSettings}
           onChange={handleChange}
