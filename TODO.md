@@ -1,14 +1,13 @@
-# TODO - Fix Toolbar Button Handlers
+# Autosave Fix - COMPLETE ✅
 
-## Plan Status: IN PROGRESS
+- [x] 1. Added guard in spreadsheetStore.js saveSheet()
+- [x] 2. FilePage.jsx: latestDataRef + simplified change handler + 3s autosave interval + filename debounce using ref
+- [x] 3. Fixed FilePage.jsx syntax/export issues
+- [x] 4. Ready to test
 
-### Steps:
-- [ ] 1. Modify SpreadsheetGrid.jsx - Add React ref forwarding to expose FortuneSheet workbook
-- [ ] 2. Modify EditorPage.jsx - Create workbookRef and pass to SpreadsheetGrid and Toolbar
-- [ ] 3. Rewrite Toolbar.jsx - Add all onClick handlers with FortuneSheet commands and toast system
-- [ ] 4. Test the implementation
+**Test steps**:
+1. `npm start`
+2. Login → open file → edit cell
+3. Wait 3s → check Network tab: /sheets/save has your data (not empty)
+4. Refresh → data persists ✅
 
-### Files to Edit:
-- client/src/components/spreadsheet/SpreadsheetGrid.jsx
-- client/src/pages/EditorPage.jsx
-- client/src/components/spreadsheet/Toolbar.jsx

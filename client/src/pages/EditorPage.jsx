@@ -76,7 +76,12 @@ const EditorPage = () => {
   }, []);
 
   const handleSheetChange = (updatedData) => {
-    if (!updatedData || !updatedData.length) return
+    console.log('📝 Sheet changed, updatedData:', updatedData)
+    
+    if (!updatedData || !updatedData.length) {
+      console.warn('⚠️ updatedData is empty:', updatedData)
+      return
+    }
     
     setSaveStatus('saving')
     clearTimeout(saveTimerRef.current)
@@ -84,35 +89,51 @@ const EditorPage = () => {
     saveTimerRef.current = setTimeout(async () => {
       try {
         const sheetId = id || window.location.pathname.split('/').pop()
-        if (!sheetId) return
+        console.log('💾 Saving sheet ID:', sheetId)
+        
+        if (!sheetId) {
+          console.error('❌ No sheet ID found')
+          setSaveStatus('error')
+          return
+        }
         
         const token = localStorage.getItem('token')
-        if (!token) return
+        if (!token) {
+          console.error('❌ No token found')
+          setSaveStatus('error')
+          return
+        }
 
+        const payload = { data: workbookRef.current?.getAllSheets?.() || updatedData }
+        console.log('📤 Sending payload:', JSON.stringify(payload).substring(0, 200))
+
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
         const response = await fetch(
-          import.meta.env.VITE_API_URL + '/api/sheets/' + sheetId,
+          apiUrl + '/sheets/' + sheetId,
           {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
               'Authorization': 'Bearer ' + token
             },
-            body: JSON.stringify({ 
-              data: updatedData
-            })
+            body: JSON.stringify(payload)
           }
         )
 
+        const responseText = await response.text()
+        console.log('📥 Response status:', response.status)
+        console.log('📥 Response text:', responseText)
+
         if (response.ok) {
           setSaveStatus('saved')
-          console.log('Sheet saved successfully')
+          console.log('✅ Sheet saved successfully')
         } else {
           setSaveStatus('error')
-          console.error('Save failed:', await response.text())
+          console.error('❌ Save failed:', responseText)
         }
       } catch (err) {
         setSaveStatus('error')
-        console.error('Save error:', err)
+        console.error('❌ Save error:', err)
       }
     }, 2000)
   }
@@ -122,13 +143,25 @@ const EditorPage = () => {
     const loadSheetData = async () => {
       try {
         const sheetId = id || window.location.pathname.split('/').pop()
-        if (!sheetId) return
+        console.log('🔍 Loading sheet ID:', sheetId)
+        
+        if (!sheetId) {
+          console.warn('⚠️ No sheet ID')
+          return
+        }
 
         const token = localStorage.getItem('token')
-        if (!token) return
+        if (!token) {
+          console.warn('⚠️ No token')
+          return
+        }
 
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+        const url = apiUrl + '/sheets/' + sheetId
+        console.log('🌐 Fetching from:', url)
+        
         const response = await fetch(
-          import.meta.env.VITE_API_URL + '/api/sheets/' + sheetId,
+          url,
           {
             headers: {
               'Authorization': 'Bearer ' + token
@@ -136,13 +169,20 @@ const EditorPage = () => {
           }
         )
 
-        if (!response.ok) return
+        console.log('📥 Load response status:', response.status)
+        if (!response.ok) {
+          console.error('❌ Load failed with status:', response.status)
+          return
+        }
 
         const sheet = await response.json()
+        console.log('📥 Loaded sheet:', JSON.stringify(sheet).substring(0, 300))
         
         if (sheet.data && Array.isArray(sheet.data) && sheet.data.length > 0) {
+          console.log('✅ Setting sheets from loaded data')
           setSheets(sheet.data)
         } else {
+          console.log('⚠️ No data in response, creating default')
           setSheets([{
             name: sheet.name || 'Sheet1',
             id: 'sheet1',
@@ -159,7 +199,7 @@ const EditorPage = () => {
         }
         setFileName(sheet.name || 'Untitled Sheet')
       } catch (err) {
-        console.error('Load error:', err)
+        console.error('❌ Load error:', err)
       }
     }
 

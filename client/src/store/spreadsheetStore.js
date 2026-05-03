@@ -30,9 +30,10 @@ const useSpreadsheetStore = create((set, get) => ({
   },
 
   /** Save sheet data to backend */
-  saveSheet: async () => {
+saveSheet: async () => {
     const { sheetId, sheetData, isSaving } = get();
-    if (isSaving || !sheetData) return;
+    if (!sheetId || !sheetData || sheetData.length === 0) return;
+    if (isSaving) return;
 
     set({ isSaving: true });
     try {

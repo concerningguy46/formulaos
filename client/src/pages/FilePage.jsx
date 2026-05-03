@@ -20,6 +20,7 @@ const FilePage = () => {
   const saveTimerRef = useRef(null)
   const latestWorkbookDataRef = useRef(createEmptyWorkbook())
   const latestFileNameRef = useRef('Untitled File')
+  const latestDataRef = useRef(null)
 
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -75,25 +76,36 @@ const FilePage = () => {
   }, [])
 
   const handleWorkbookChange = useCallback((data) => {
+    latestDataRef.current = data
     setWorkbookData(data)
-    latestWorkbookDataRef.current = data
     setIsDirty(true)
     setSaveStatus('saving')
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current)
-    }
-    saveTimerRef.current = setTimeout(async () => {
-      try {
-        await fileService.saveFile(fileId, { name: latestFileNameRef.current, data })
-        setSaveStatus('saved')
-        setIsDirty(false)
-        setSaveError('')
-      } catch (err) {
-        setSaveStatus('error')
-        setSaveError(err.response?.data?.message || 'Autosave failed')
+  }, [])
+
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (latestDataRef.current && fileId) {
+        console.log('AUTOSAVE FIRING — data:', latestDataRef.current)
+        try {
+          await fileService.saveFile(fileId, {
+            name: latestFileNameRef.current,
+            data: latestDataRef.current
+          })
+          console.log('AUTOSAVE SUCCESS')
+          setSaveStatus('saved')
+          setIsDirty(false)
+          setSaveError('')
+        } catch (e) {
+          console.log('AUTOSAVE ERROR:', e.message)
+          setSaveStatus('error')
+          setSaveError(e.message)
+        }
+      } else {
+        console.log('AUTOSAVE SKIPPED — latestDataRef:', !!latestDataRef.current, 'fileId:', fileId)
       }
-    }, 1000)
-  }, [fileId, fileName])
+    }, 3000)
+    return () => clearInterval(interval)
+  }, [fileId])
 
   useEffect(() => {
     const loadFile = async () => {
@@ -106,7 +118,7 @@ const FilePage = () => {
         setFileName(nextName)
         latestFileNameRef.current = nextName
         setWorkbookData(nextData)
-        latestWorkbookDataRef.current = nextData
+        latestDataRef.current = nextData
         setIsDirty(false)
         setLoadedVersion(v => v + 1)
       } catch (err) {
@@ -121,7 +133,7 @@ const FilePage = () => {
     return () => {
       if (saveTimerRef.current) {
         clearTimeout(saveTimerRef.current)
-        const pendingData = latestWorkbookDataRef.current
+        const pendingData = workbookRef.current?.getAllSheets?.() || latestDataRef.current || latestWorkbookDataRef.current
         const pendingName = latestFileNameRef.current
         ;(async () => {
           try {
@@ -146,8 +158,50 @@ const FilePage = () => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [isDirty])
 
-  const handleImport = () => {}
-  const handleExport = () => {}
+  const handleImport = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.json'
+    input.onchange = async (e) => {
+      const file = e.target.files[0]
+      if (!file) return
+      try {
+        const text = await file.text()
+        let data
+        try {
+          data = JSON.parse(text)
+        } catch (parseErr) {
+          console.error('Import failed - Invalid JSON:', parseErr.message)
+          setSaveError('Failed to import: Invalid JSON format. ' + parseErr.message)
+          return
+        }
+        if (!Array.isArray(data)) {
+          console.error('Import failed - Not an array')
+          setSaveError('Failed to import: File must contain a JSON array')
+          return
+        }
+        setWorkbookData(data)
+        latestDataRef.current = data
+        setLoadedVersion(prev => prev + 1)
+        setIsDirty(true)
+        setSaveStatus('saving')
+        await fileService.saveFile(fileId, { name: fileName, data })
+        setSaveStatus('saved')
+        setIsDirty(false)
+        setSaveError('')
+      } catch (err) {
+        console.error('Import failed:', err.message)
+        setSaveError('Failed to import file: ' + err.message)
+      }
+    }
+
+    input.click()
+  }
+
+  const handleExport = () => {
+    const dataToExport = workbookRef.current?.getAllSheets?.() || workbookData
+    downloadWorkbookDraft(dataToExport, `${fileName || 'formulaos'}.json`)
+  }
 
   if (loading) {
     return (
@@ -161,7 +215,7 @@ const FilePage = () => {
     return (
       <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: '24px' }}>
         <div style={{ maxWidth: '520px', width: '100%', border: '1px solid var(--ivory-3)', background: 'white', borderRadius: '18px', padding: '24px' }}>
-          <h1 style={{ margin: 0, color: 'var(--ink)' }}>Can&apos;t open file</h1>
+          <h1 style={{ margin: 0, color: 'var(--ink)' }}>Can't open file</h1>
           <p style={{ margin: '10px 0 0', color: 'var(--ink-3)' }}>{loadError}</p>
           <button onClick={() => navigate('/editor')} style={{ marginTop: '18px', border: 'none', background: 'var(--teal)', color: 'white', padding: '12px 16px', borderRadius: '12px', cursor: 'pointer' }}>
             Back to workspace
@@ -191,7 +245,8 @@ const FilePage = () => {
               if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
               saveTimerRef.current = setTimeout(async () => {
                 try {
-                  await fileService.saveFile(fileId, { name: nextName, data: workbookData })
+                  const currentData = workbookRef.current?.getAllSheets?.() || latestDataRef.current
+                  await fileService.saveFile(fileId, { name: nextName, data: currentData })
                   setSaveStatus('saved')
                   setIsDirty(false)
                 } catch {
@@ -203,7 +258,7 @@ const FilePage = () => {
           />
         </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--ink-3)', fontSize: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--ink-3)', fontSize: '12px' }}>
           {saveStatus === 'saving' ? <Save size={14} /> : <Search size={14} />}
           {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'error' ? 'Save failed' : 'Saved'}
         </div>

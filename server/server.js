@@ -32,15 +32,22 @@ const app = express();
 // Security headers
 app.use(helmet());
 
-// CORS — allow frontend origins
+// CORS configuration
 app.use(cors({
   origin: function(origin, callback) {
     const allowedOrigins = [
+      'http://localhost:3000',
       'http://localhost:5173',
       'http://localhost:5174',
       'http://localhost:5175',
-      'http://localhost:3000',
-      'http://localhost:4173',
+      'http://localhost:5176',
+      'http://localhost:5177',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:5173',
+      'http://127.0.0.1:5174',
+      'http://127.0.0.1:5175',
+      'http://127.0.0.1:5176',
+      'http://127.0.0.1:5177',
       'https://formulaos.vercel.app',
       process.env.FRONTEND_URL
     ].filter(Boolean)
@@ -52,11 +59,10 @@ app.use(cors({
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }))
 
-// Handle preflight requests
 app.options('*', cors())
 
 // Request logging (dev only)
@@ -124,13 +130,48 @@ app.use(errorHandler);
 // Start Server
 // ---------------------
 
-const PORT = process.env.PORT || 5000;
+const net = require('node:net');
+const START_PORT = process.env.PORT ? Number(process.env.PORT) : 5000;
+const MAX_PORT = process.env.NODE_ENV === 'production' ? START_PORT : START_PORT + 10;
+
+const tryBindPort = (port) => new Promise((resolve) => {
+  const server = express()
+  server.listen(port, '0.0.0.0')
+    .once('listening', () => {
+      server.close(() => resolve(true))
+    })
+    .once('error', (err) => {
+      if (err.code === 'EADDRINUSE' || err.code === 'EACCES') {
+        resolve(false)
+      } else {
+        resolve(false)
+      }
+    })
+})
+
+const findAvailablePort = async (start, max) => {
+  for (let port = start; port <= max; port += 1) {
+    const available = await tryBindPort(port)
+    if (available) {
+      return port
+    }
+  }
+  return start
+}
 
 const startServer = async () => {
   try {
     const connected = await connectDB();
+    let PORT = START_PORT;
+    
+    if (process.env.NODE_ENV === 'development') {
+      PORT = await findAvailablePort(START_PORT, MAX_PORT);
+    }
 
     app.listen(PORT, () => {
+      if (PORT !== START_PORT && process.env.NODE_ENV === 'development') {
+        console.log(`⚠️  Default port ${START_PORT} was busy, running server on port ${PORT}`)
+      }
       console.log(`🚀 FormulaOS server running on port ${PORT}`);
       console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
       if (!connected) {

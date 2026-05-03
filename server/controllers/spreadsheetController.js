@@ -28,31 +28,22 @@ const serializeSheet = sheet => {
     ...plain,
     fileId: String(plain._id),
     fileName: plain.name,
-    data: plain.data || DEFAULT_WORKBOOK,
+data: plain.data,
   }
 }
 
 exports.deepSaveSpreadsheet = async (req, res, next) => {
   try {
     const { sheetId, name, data } = req.body
-    const payload = {
-      userId: req.user._id,
-      name: String(name || 'Untitled File').trim() || 'Untitled File',
-      data: normalizeWorkbookData(data),
-      lastSavedAt: new Date(),
-    }
+    const normalizedData = normalizeWorkbookData(data)
 
     let sheet
 
     if (sheetId) {
-      sheet = await Sheet.findOneAndUpdate(
-        { _id: sheetId, userId: req.user._id },
-        payload,
-        {
-          new: true,
-          runValidators: true,
-        }
-      )
+      sheet = await Sheet.findOne({
+        _id: sheetId,
+        userId: req.user._id,
+      })
 
       if (!sheet) {
         return res.status(404).json({
@@ -60,8 +51,18 @@ exports.deepSaveSpreadsheet = async (req, res, next) => {
           message: 'File not found',
         })
       }
+
+      sheet.name = String(name || 'Untitled File').trim() || 'Untitled File'
+      sheet.data = JSON.parse(JSON.stringify(normalizedData))
+      sheet.lastSavedAt = new Date()
+      sheet.markModified('data')\n      await sheet.save()\n      console.log('DEBUG SAVE: original length:', normalizedData.length, 'post-save sheet.data:', !!sheet.data?.length, 'sheet._id:', sheet._id)
     } else {
-      sheet = await Sheet.create(payload)
+      sheet = await Sheet.create({
+        userId: req.user._id,
+        name: String(name || 'Untitled File').trim() || 'Untitled File',
+        data: normalizedData,
+        lastSavedAt: new Date(),
+      })
     }
 
     return res.status(sheetId ? 200 : 201).json({
@@ -136,34 +137,18 @@ exports.deleteSpreadsheet = async (req, res, next) => {
 
 exports.updateSheet = async (req, res) => {
   try {
-    const { id } = req.params
-    const { name, data, isFavorite } = req.body
-
-    const sheet = await Sheet.findOne({ 
-      _id: id, 
-      userId: req.user._id 
+    const sheet = await Sheet.findOne({
+      _id: req.params.id,
+      userId: req.user._id
     })
-
-    if (!sheet) {
-      return res.status(404).json({ message: 'Sheet not found' })
-    }
-
-    if (name !== undefined) sheet.name = name
-    if (data !== undefined) sheet.data = data
-    if (isFavorite !== undefined) sheet.isFavorite = isFavorite
-    sheet.updatedAt = new Date()
-
+    if (!sheet) return res.status(404).json({ message: 'Not found' })
+    if (req.body.name !== undefined) sheet.name = req.body.name
+    if (req.body.data !== undefined) sheet.data = JSON.parse(JSON.stringify(req.body.data))
+    if (req.body.isFavorite !== undefined) sheet.isFavorite = req.body.isFavorite
     sheet.markModified('data')
     await sheet.save()
-
-    res.json({ 
-      message: 'Saved',
-      _id: sheet._id,
-      name: sheet.name,
-      updatedAt: sheet.updatedAt
-    })
+    res.json({ message: 'Saved', _id: sheet._id })
   } catch (error) {
-    console.error('Update sheet error:', error)
-    res.status(500).json({ message: 'Save failed', error: error.message })
+    res.status(500).json({ message: error.message })
   }
 }
